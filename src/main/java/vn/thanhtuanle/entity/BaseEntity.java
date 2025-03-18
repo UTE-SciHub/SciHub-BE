@@ -12,7 +12,6 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
@@ -27,8 +26,9 @@ public abstract class BaseEntity {
     private LocalDateTime updatedAt;
 
     @CreatedBy
-    private UUID createdBy;
+    @Column(updatable = false)
+    private String createdBy;
 
     @LastModifiedBy
-    private UUID updatedBy;
+    private String updatedBy;
 }

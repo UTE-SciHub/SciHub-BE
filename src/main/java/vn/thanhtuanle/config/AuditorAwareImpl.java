@@ -6,19 +6,25 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import vn.thanhtuanle.entity.User;
 
 import java.util.Optional;
-import java.util.UUID;
 
-public class AuditorAwareImpl implements AuditorAware<UUID> {
+public class AuditorAwareImpl implements AuditorAware<String> {
 
     @Override
-    public Optional<UUID> getCurrentAuditor() {
+    public Optional<String> getCurrentAuditor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            return Optional.of(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+            return Optional.of("sys_admin");
         }
 
-        User userPrincipal = (User) authentication.getPrincipal();
-        return Optional.of(userPrincipal.getId());
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User) {
+            User userPrincipal = (User) principal;
+            return Optional.of(userPrincipal.getId().toString());
+        } else if (principal instanceof String) {
+            return Optional.of((String) principal);
+        }
+
+        return Optional.of("unknown");
     }
 }

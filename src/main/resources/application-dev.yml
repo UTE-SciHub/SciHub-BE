@@ -21,6 +21,18 @@ spring:
       hibernate:
         format_sql: true
 
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: 9e9fb975d7f626
+    password: efcf0e3fd4e576
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 springdoc:
   api-docs:
     enabled: true
@@ -32,3 +44,11 @@ openapi:
     server: http://localhost:${SERVER_PORT:8080}
     title: Backend service
     version: 1.0.0
+
+application:
+  security:
+    jwt:
+      secret-key: 6250655368566B5970337336763979244226452948404D635166546A576E5A71
+      expiration: 86400000 # 1 day
+      refresh-token:
+        expiration: 604800000 # 7 days

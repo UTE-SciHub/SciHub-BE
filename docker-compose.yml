@@ -6,7 +6,7 @@ services:
       - SYS_NICE
     restart: always
     environment:
-      - MYSQL_DATABASE=smarthire
+      - MYSQL_DATABASE=utescihub
       - MYSQL_ROOT_PASSWORD=123456
     ports:
       - '3307:3306'
