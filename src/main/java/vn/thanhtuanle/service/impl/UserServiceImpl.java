@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import vn.thanhtuanle.common.Constant;
+import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.entity.User;
 import vn.thanhtuanle.model.dto.UserDTO;
 import vn.thanhtuanle.model.response.UserResponse;

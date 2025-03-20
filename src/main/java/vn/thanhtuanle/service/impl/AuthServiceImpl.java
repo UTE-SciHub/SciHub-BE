@@ -3,12 +3,10 @@ package vn.thanhtuanle.service.impl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.thanhtuanle.common.enums.ErrorCode;
 import vn.thanhtuanle.common.enums.TokenType;
@@ -26,13 +24,11 @@ import vn.thanhtuanle.service.AuthService;
 @RequiredArgsConstructor
 @Log4j2
 public class AuthServiceImpl implements AuthService {
-
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final TokenRepository tokenRepository;
 
-    @Transactional
     @Override
     public AuthResponse login(LoginRequest req) {
         log.info("Login attempt with email: {}", req.getEmail());
@@ -68,7 +64,6 @@ public class AuthServiceImpl implements AuthService {
                 .refreshToken(refreshToken)
                 .build();
     }
-
 
     @Override
     public boolean introspect(String token) {

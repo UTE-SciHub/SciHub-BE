@@ -15,6 +15,15 @@ public enum ErrorCode {
     USER_NOT_FOUND(1404, "User not found", HttpStatus.NOT_FOUND),
     INVALID_CREDENTIALS(1401, "Invalid credentials", HttpStatus.UNAUTHORIZED),
     INVALID_TOKEN(1402, "Invalid token", HttpStatus.UNAUTHORIZED),
+    TOKEN_EXPIRED(1403, "Token expired", HttpStatus.UNAUTHORIZED),
+    INVALID_REQUEST(1400, "Invalid request", HttpStatus.BAD_REQUEST),
+    INTERNAL_SERVER_ERROR(1500, "Internal server error", HttpStatus.INTERNAL_SERVER_ERROR),
+    REGISTRATION_PERIOD_NOT_FOUND(1404, "Registration period not found", HttpStatus.NOT_FOUND),
+    REGISTRATION_PERIOD_ALREADY_EXISTED(1405, "Registration period is already existed", HttpStatus.BAD_REQUEST),
+    REGISTRATION_PERIOD_IS_CLOSED(1406, "Registration period is closed", HttpStatus.BAD_REQUEST),
+    DATABASE_ERROR(1501, "Database error", HttpStatus.INTERNAL_SERVER_ERROR),
+    MAPPING_ERROR(1502, "Mapping error", HttpStatus.INTERNAL_SERVER_ERROR),
+    FORBIDDEN_ERROR(1403, "Forbidden", HttpStatus.FORBIDDEN),
     ;
 
     Integer code;

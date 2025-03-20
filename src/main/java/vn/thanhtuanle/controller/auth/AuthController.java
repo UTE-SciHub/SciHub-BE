@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import vn.thanhtuanle.common.Constant;
+import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.model.request.LoginRequest;
 import vn.thanhtuanle.model.response.AuthResponse;
 import vn.thanhtuanle.model.response.BaseResponse;
@@ -27,7 +27,7 @@ public class AuthController {
     public ResponseEntity<BaseResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest req) {
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<AuthResponse>builder()
                 .status(HttpStatus.OK.value())
-                .message(Constant.SUCCESSFULLY.getValue())
+                .message(Constant.LOGIN_SUCCESSFULLY.getValue())
                 .data(authService.login(req))
                 .build());
     }
