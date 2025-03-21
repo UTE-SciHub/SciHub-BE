@@ -24,6 +24,9 @@ public enum ErrorCode {
     DATABASE_ERROR(1501, "Database error", HttpStatus.INTERNAL_SERVER_ERROR),
     MAPPING_ERROR(1502, "Mapping error", HttpStatus.INTERNAL_SERVER_ERROR),
     FORBIDDEN_ERROR(1403, "Forbidden", HttpStatus.FORBIDDEN),
+    FILE_NOT_PROVIDED(1407, "File not provided", HttpStatus.BAD_REQUEST),
+    FILE_UPLOAD_ERROR(1503, "File upload error", HttpStatus.INTERNAL_SERVER_ERROR),
+    FILE_SIZE_EXCEEDED(1408, "File size exceeded", HttpStatus.BAD_REQUEST),
     ;
 
     Integer code;
