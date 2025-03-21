@@ -9,8 +9,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.model.dto.RegistrationPeriodDTO;
 import vn.thanhtuanle.model.request.RegistrationPeriodRequest;
@@ -46,7 +48,7 @@ public class RegistrationPeriodController {
 
         PageResponse<?> pageResponse = PageResponse.<List<RegistrationPeriodDTO>>builder()
                 .status(HttpStatus.OK.value())
-                .message(Constant.CREATED_SUCCESSFULLY.getValue())
+                .message(Constant.SUCCESS.getValue())
                 .currentPage(page)
                 .totalPages(pageResult.getTotalPages())
                 .totalItems(pageResult.getTotalElements())
@@ -59,12 +61,14 @@ public class RegistrationPeriodController {
     }
 
     @Operation(summary = "Registration Period API", description = "Create a registration period")
-    @PostMapping
-    public ResponseEntity<BaseResponse<?>> create(@Valid @RequestBody RegistrationPeriodRequest req) {
-        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<RegistrationPeriodDTO>builder()
-                .status(HttpStatus.OK.value())
-                .message(Constant.SUCCESS.getValue())
-                .data(registrationPeriodService.create(req))
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<BaseResponse<?>> create(
+            @Valid @RequestPart("data") RegistrationPeriodRequest req,
+            @RequestPart("decisionFile") MultipartFile decisionFile) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<RegistrationPeriodDTO>builder()
+                .status(HttpStatus.CREATED.value())
+                .message(Constant.CREATED_SUCCESSFULLY.getValue())
+                .data(registrationPeriodService.create(req, decisionFile))
                 .build());
     }
 }

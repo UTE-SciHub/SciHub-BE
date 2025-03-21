@@ -7,4 +7,6 @@ public interface AuthService {
     AuthResponse login(LoginRequest req);
 
     boolean introspect(String token);
+
+    AuthResponse refreshToken(String refreshToken);
 }

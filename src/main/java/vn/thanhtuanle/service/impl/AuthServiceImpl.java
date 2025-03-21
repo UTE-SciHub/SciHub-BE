@@ -1,6 +1,5 @@
 package vn.thanhtuanle.service.impl;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,6 +27,26 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final TokenRepository tokenRepository;
+
+    private void savedUserToken(User user, String jwtToken) {
+        Token token = Token.builder()
+                .user(user)
+                .token(jwtToken)
+                .tokenType(TokenType.BEARER)
+                .revoked(false)
+                .expired(false)
+                .build();
+        tokenRepository.save(token);
+    }
+
+    private void revokeAllUserTokens(User user) {
+        var validTokens = tokenRepository.findAllValidTokenByUser(user.getId());
+        if(validTokens.isEmpty()) {
+            return;
+        }
+
+        tokenRepository.deleteAll(validTokens);
+    }
 
     @Override
     public AuthResponse login(LoginRequest req) {
@@ -77,23 +96,31 @@ public class AuthServiceImpl implements AuthService {
         return !jwtService.isTokenExpired(existedToken.getToken());
     }
 
-    private void savedUserToken(User user, String jwtToken) {
-        Token token = Token.builder()
-                .user(user)
-                .token(jwtToken)
-                .tokenType(TokenType.BEARER)
-                .revoked(false)
-                .expired(false)
-                .build();
-        tokenRepository.save(token);
-    }
+    @Override
+    public AuthResponse refreshToken(String refreshToken) {
+        log.info("Refresh token attempt");
+        String email = jwtService.extractUsername(refreshToken);
 
-    private void revokeAllUserTokens(User user) {
-        var validTokens = tokenRepository.findAllValidTokenByUser(user.getId());
-        if(validTokens.isEmpty()) {
-            return;
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.warn("Refresh token failed for email: {} - Reason: User not found", email);
+                    return new AppException(ErrorCode.INVALID_CREDENTIALS);
+                });
+
+        if(jwtService.isTokenValid(refreshToken, user)) {
+            String accessToken = jwtService.generateToken(user);
+
+            revokeAllUserTokens(user);
+            savedUserToken(user, accessToken);
+
+            log.info("Refresh token successful for email: {}", email);
+            return AuthResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .build();
         }
 
-        tokenRepository.deleteAll(validTokens);
+        log.warn("Refresh token failed for email: {} - Reason: Invalid token", email);
+        throw new AppException(ErrorCode.INVALID_TOKEN);
     }
 }
