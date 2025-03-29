@@ -7,4 +7,6 @@ import vn.thanhtuanle.model.response.UserResponse;
 public interface UserService {
     @Transactional
     UserResponse create(UserDTO req);
+
+    UserResponse getCurrentUser(String token);
 }

@@ -1,5 +1,6 @@
 package vn.thanhtuanle.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -18,7 +19,6 @@ import vn.thanhtuanle.model.request.RegistrationPeriodRequest;
 import vn.thanhtuanle.repository.RegistrationPeriodRepository;
 import vn.thanhtuanle.service.RegistrationPeriodService;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -27,6 +27,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +42,10 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         RegistrationPeriod latestPeriod = registrationPeriodRepository.findTopByOrderByCreatedAtDesc();
 
+        if(latestPeriod == null) {
+            return String.format("001_UTE_%s_DK", datePart);
+        }
+
         int count = Integer.parseInt(latestPeriod.getId().split("_")[0]);
         String no = String.format("%03d", count + 1);
 
@@ -46,24 +53,26 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     }
 
     @Override
-    public Page<RegistrationPeriodDTO> getAll(Pageable pageable, String query) {
-        Page<RegistrationPeriod> registrationPeriods;
+    public Page<RegistrationPeriodDTO> getAll(Pageable pageable, String query, RegistrationPeriodsStatus status) {
+        Specification<RegistrationPeriod> spec = Specification.where(null);
+
+        if (status != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("status"), status));
+        }
 
         if (query != null && !query.trim().isEmpty()) {
-            Specification<RegistrationPeriod> spec = (root, criteriaQuery, criteriaBuilder) -> {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) -> {
                 String searchPattern = "%" + query.toLowerCase() + "%";
                 return criteriaBuilder.or(
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("id")), searchPattern),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), searchPattern),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), searchPattern)
                 );
-            };
-
-            registrationPeriods = registrationPeriodRepository.findAll(spec, pageable);
-        } else {
-            registrationPeriods = registrationPeriodRepository.findAll(pageable);
+            });
         }
 
+        Page<RegistrationPeriod> registrationPeriods = registrationPeriodRepository.findAll(spec, pageable);
         return registrationPeriods.map(period -> modelMapper.map(period, RegistrationPeriodDTO.class));
     }
 
@@ -116,5 +125,36 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
             log.error(e.getMessage());
             throw new AppException(ErrorCode.FILE_UPLOAD_ERROR);
         }
+    }
+
+    @Override
+    @Transactional
+    public void closeMultiple(List<String> ids) {
+        log.info("Closing registration periods: {}", ids);
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("Danh sách mã đợt đăng ký không được để trống");
+        }
+
+        List<RegistrationPeriod> periods = registrationPeriodRepository.findAllById(ids);
+        if (periods.size() != ids.size()) {
+            Set<String> foundIds = periods.stream()
+                    .map(RegistrationPeriod::getId)
+                    .collect(Collectors.toSet());
+            Set<String> missingIds = ids.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .collect(Collectors.toSet());
+
+            log.warn("Không tìm thấy đợt đăng ký có id: {}", missingIds);
+            throw new EntityNotFoundException("Không tìm thấy đợt đăng ký có id: " + missingIds);
+        }
+
+        periods.forEach(period -> {
+            if (period.getStatus() != RegistrationPeriodsStatus.CLOSED) {
+                period.setStatus(RegistrationPeriodsStatus.CLOSED);
+            }
+        });
+
+        log.info("Updating status of registration periods: {}", ids);
+        registrationPeriodRepository.saveAll(periods);
     }
 }

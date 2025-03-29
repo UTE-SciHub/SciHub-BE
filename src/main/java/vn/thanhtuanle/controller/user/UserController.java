@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.model.dto.UserDTO;
+import vn.thanhtuanle.model.request.TokenRequest;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.model.response.UserResponse;
 import vn.thanhtuanle.service.UserService;
@@ -28,6 +29,15 @@ public class UserController {
                 .status(HttpStatus.OK.value())
                 .message(Constant.CREATED_SUCCESSFULLY.getValue())
                 .data(userService.create(req))
+                .build());
+    }
+
+    @PostMapping("/me")
+    public ResponseEntity<?> me(@RequestBody TokenRequest req) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<UserResponse>builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(userService.getCurrentUser(req.getToken()))
                 .build());
     }
 }
