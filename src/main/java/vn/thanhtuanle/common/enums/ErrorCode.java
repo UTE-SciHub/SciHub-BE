@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatusCode;
 public enum ErrorCode {
 
     USER_NOT_FOUND(1404, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
+    USER_BLOCKED(1405, "Tài khoản đã bị khóa", HttpStatus.BAD_REQUEST),
+    USER_ALREADY_EXISTS(1405, "Người dùng đã tồn tại", HttpStatus.BAD_REQUEST),
     INVALID_CREDENTIALS(1401, "Thông tin đăng nhập không chính xác", HttpStatus.UNAUTHORIZED),
     INVALID_TOKEN(1402, "Token không hợp lệ", HttpStatus.UNAUTHORIZED),
     TOKEN_EXPIRED(1403, "Token đã hết hạn", HttpStatus.UNAUTHORIZED),
@@ -27,6 +29,7 @@ public enum ErrorCode {
     FILE_NOT_PROVIDED(1407, "Không có tệp được cung cấp", HttpStatus.BAD_REQUEST),
     FILE_UPLOAD_ERROR(1503, "Lỗi tải tệp lên", HttpStatus.INTERNAL_SERVER_ERROR),
     FILE_SIZE_EXCEEDED(1408, "Kích thước tệp vượt quá giới hạn", HttpStatus.BAD_REQUEST),
+    EXCEL_EXPORT_ERROR(1504, "Lỗi xuất Excel", HttpStatus.INTERNAL_SERVER_ERROR),
     ;
 
     Integer code;

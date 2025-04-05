@@ -16,6 +16,8 @@ import java.util.Date;
 @AllArgsConstructor
 @Builder
 public class RegistrationPeriodRequest {
+    private String id;
+
     @NotBlank(message = "Tiêu đề không được để trống")
     @Size(max = 255, message = "Tiêu đề không được vượt quá 255 ký tự")
     private String title;
