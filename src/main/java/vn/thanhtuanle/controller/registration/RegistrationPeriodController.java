@@ -19,10 +19,12 @@ import vn.thanhtuanle.common.enums.RegistrationPeriodsStatus;
 import vn.thanhtuanle.common.enums.UserStatus;
 import vn.thanhtuanle.model.dto.RegistrationPeriodDTO;
 import vn.thanhtuanle.model.request.RegistrationPeriodRequest;
+import vn.thanhtuanle.model.request.UpdateRegistrationRequest;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.model.response.PageResponse;
 import vn.thanhtuanle.service.RegistrationPeriodService;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Date;
@@ -73,7 +75,7 @@ public class RegistrationPeriodController {
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<BaseResponse<?>> create(
             @Valid @RequestPart("data") RegistrationPeriodRequest req,
-            @RequestPart("decisionFile") MultipartFile decisionFile) {
+            @RequestPart("decisionFile") MultipartFile decisionFile) throws IOException {
         return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<RegistrationPeriodDTO>builder()
                 .status(HttpStatus.CREATED.value())
                 .message(Constant.CREATED_SUCCESSFULLY.getValue())
@@ -104,8 +106,8 @@ public class RegistrationPeriodController {
     @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<BaseResponse<?>> update (
             @PathVariable String id,
-            @Valid @RequestPart("data") RegistrationPeriodRequest req,
-            @RequestPart("decisionFile") MultipartFile decisionFile) {
+            @Valid @RequestPart("data") UpdateRegistrationRequest req,
+            @RequestPart(value = "decisionFile", required = false) MultipartFile decisionFile) throws IOException {
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<RegistrationPeriodDTO>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())

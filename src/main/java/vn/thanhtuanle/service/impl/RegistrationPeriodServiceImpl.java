@@ -18,11 +18,13 @@ import vn.thanhtuanle.common.enums.RoleType;
 import vn.thanhtuanle.common.mapper.ExcelExporterFactory;
 import vn.thanhtuanle.common.mapper.RegistrationPeriodExcelRowMapper;
 import vn.thanhtuanle.common.service.ExcelExporter;
+import vn.thanhtuanle.common.service.FileUtil;
 import vn.thanhtuanle.entity.RegistrationPeriod;
 import vn.thanhtuanle.exception.AppException;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.RegistrationPeriodDTO;
 import vn.thanhtuanle.model.request.RegistrationPeriodRequest;
+import vn.thanhtuanle.model.request.UpdateRegistrationRequest;
 import vn.thanhtuanle.repository.RegistrationPeriodRepository;
 import vn.thanhtuanle.service.RegistrationPeriodService;
 
@@ -47,6 +49,9 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     private final ExcelExporterFactory excelExporterFactory;
     @Qualifier("registrationPeriodExcelRowMapper")
     private final RegistrationPeriodExcelRowMapper excelRowMapper;
+
+    private static final String UPLOAD_DIR = "uploads";
+    private static final Path storageFolder = Paths.get(UPLOAD_DIR);
 
     private final List<String> EXCEL_HEADERS = List.of(
             "Mã đợt đăng ký",
@@ -81,7 +86,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
     @Override
     @Transactional
-    public RegistrationPeriodDTO create(RegistrationPeriodRequest req, MultipartFile decisionFile) {
+    public RegistrationPeriodDTO create(RegistrationPeriodRequest req, MultipartFile decisionFile) throws IOException {
         log.info("Creating registration period: {}", req);
         String id = generateId();
 
@@ -93,7 +98,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         registrationPeriod.setId(id);
         registrationPeriod.setStatus(RegistrationPeriodsStatus.OPEN);
 
-        String decisionFilePath = saveFile(decisionFile);
+        String decisionFilePath = FileUtil.generatedFileName(decisionFile);
+        FileUtil.saveFile(decisionFilePath, decisionFile);
         registrationPeriod.setDecisionFile(decisionFilePath);
 
         registrationPeriod = registrationPeriodRepository.saveAndFlush(registrationPeriod);
@@ -111,19 +117,19 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
         try {
             String fileName = file.getOriginalFilename();
-            Path uploadPath = Paths.get("uploads");
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
+            if (!Files.exists(storageFolder)) {
+                Files.createDirectories(storageFolder);
             }
 
             try (InputStream inputStream = file.getInputStream()) {
-                Path filePath = uploadPath.resolve(fileName);
+                assert fileName != null;
+                Path filePath = storageFolder.resolve(fileName);
                 Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 log.error(e.getMessage());
             }
 
-            return "uploads/" + fileName;
+            return String.format("%s/%s", UPLOAD_DIR, file.getOriginalFilename());
         } catch (IOException e) {
             log.error(e.getMessage());
             throw new AppException(ErrorCode.FILE_UPLOAD_ERROR);
@@ -163,7 +169,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
     @Transactional
     @Override
-    public RegistrationPeriodDTO update(String id, RegistrationPeriodRequest req, MultipartFile decisionFile) {
+    public RegistrationPeriodDTO update(String id, UpdateRegistrationRequest req, MultipartFile decisionFile) throws IOException {
         log.info("Updating registration period with id: {}", id);
 
         RegistrationPeriod registrationPeriod = registrationPeriodRepository.findById(id)
@@ -172,8 +178,9 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         modelMapper.map(req, registrationPeriod);
 
         if (decisionFile != null && !decisionFile.isEmpty()) {
-            String decisionFilePath = saveFile(decisionFile);
-            registrationPeriod.setDecisionFile(decisionFilePath);
+            String decisionFileName = FileUtil.generatedFileName(decisionFile);
+            FileUtil.saveFile(decisionFileName, decisionFile);
+            registrationPeriod.setDecisionFile(decisionFileName);
         }
 
         registrationPeriod = registrationPeriodRepository.save(registrationPeriod);
