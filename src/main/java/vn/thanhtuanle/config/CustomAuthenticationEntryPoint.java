@@ -11,6 +11,8 @@ import vn.thanhtuanle.model.response.BaseResponse;
 
 import java.io.IOException;
 
+import static vn.thanhtuanle.common.enums.ErrorCode.FORBIDDEN_ERROR;
+
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -19,8 +21,8 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
         BaseResponse<?> responseData = BaseResponse.builder()
                 .status(HttpStatus.FORBIDDEN.value())
-                .code(ErrorCode.FORBIDDEN_ERROR.getCode())
-                .message(ErrorCode.FORBIDDEN_ERROR.getMessage())
+                .code(FORBIDDEN_ERROR.getCode())
+                .message(FORBIDDEN_ERROR.getMessage())
                 .build();
 
         String jsonResponse = objectMapper.writeValueAsString(responseData);

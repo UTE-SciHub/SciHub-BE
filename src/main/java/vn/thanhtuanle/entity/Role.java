@@ -10,6 +10,7 @@ import vn.thanhtuanle.common.enums.RoleType;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Role {
 
     @Id

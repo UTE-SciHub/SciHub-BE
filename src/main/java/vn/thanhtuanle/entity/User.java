@@ -4,7 +4,11 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import vn.thanhtuanle.common.enums.Gender;
+import vn.thanhtuanle.common.enums.UserStatus;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -26,15 +30,31 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    private String name;
+
+    private String phoneNumber;
+
+    private String imageUrl;
+
+    private LocalDateTime lastLogin;
+
+    @Enumerated(EnumType.STRING)
+    private UserStatus status;
+
     @Column(nullable = false, length = 255)
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    private LocalDate dob; // yyyy-MM-dd
 
     @ManyToMany(cascade = CascadeType.ALL,fetch = FetchType.EAGER)
     @JoinTable(name = "user_role",
             joinColumns=@JoinColumn(name="user", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name="role", referencedColumnName = "id")
     )
-    private Set<Role> roles= new HashSet<>();
+    private Set<Role> roles = new HashSet<>();
 
     @OneToMany(mappedBy = "user")
     private List<Token> tokens;

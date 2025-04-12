@@ -9,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.thanhtuanle.common.enums.ErrorCode;
 import vn.thanhtuanle.common.enums.TokenType;
+import vn.thanhtuanle.common.enums.UserStatus;
 import vn.thanhtuanle.common.service.JwtService;
 import vn.thanhtuanle.entity.Token;
 import vn.thanhtuanle.entity.User;
@@ -18,6 +19,9 @@ import vn.thanhtuanle.model.response.AuthResponse;
 import vn.thanhtuanle.repository.TokenRepository;
 import vn.thanhtuanle.repository.UserRepository;
 import vn.thanhtuanle.service.AuthService;
+
+import java.time.LocalDateTime;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -58,6 +62,11 @@ public class AuthServiceImpl implements AuthService {
                     return new AppException(ErrorCode.INVALID_CREDENTIALS);
                 });
 
+        if (user.getStatus().equals(UserStatus.BLOCKED)) {
+            log.warn("Login failed for email: {} - Reason: User is inactive", req.getEmail());
+            throw new AppException(ErrorCode.USER_BLOCKED);
+        }
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
@@ -78,6 +87,11 @@ public class AuthServiceImpl implements AuthService {
         );
 
         log.info("Login successful for email: {}", req.getEmail());
+
+        user.setLastLogin(LocalDateTime.now());
+
+        userRepository.save(user);
+
         return AuthResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)

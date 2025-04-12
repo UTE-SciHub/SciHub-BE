@@ -8,12 +8,10 @@ import lombok.experimental.FieldDefaults;
 @Getter
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public enum Constant {
+public enum ErrorType {
+    DUPLICATE("duplicate"),
+    VALIDATION("validation"),
+    ;
 
-    SUCCESS("Thành công!"),
-    CREATED_SUCCESSFULLY("Tạo mới thành công!"),
-    LOGIN_SUCCESSFULLY("Đăng nhập thành công!"),;
-
-    String value;
+    String type;
 }
-

@@ -61,3 +61,6 @@ application:
       expiration: 86400000 # 1 day
       refresh-token:
         expiration: 604800000 # 7 days
+  user:
+    password:
+      default: ${USER_PASSWORD_DEFAULT}
