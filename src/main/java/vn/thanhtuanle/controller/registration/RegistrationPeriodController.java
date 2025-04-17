@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.common.enums.RegistrationPeriodsStatus;
-import vn.thanhtuanle.common.enums.UserStatus;
 import vn.thanhtuanle.model.dto.RegistrationPeriodDTO;
 import vn.thanhtuanle.model.request.RegistrationPeriodRequest;
 import vn.thanhtuanle.model.request.UpdateRegistrationRequest;

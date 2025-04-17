@@ -1,5 +1,6 @@
 package vn.thanhtuanle.model.dto;
 
+import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
 
 @Getter
@@ -7,13 +8,13 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DepartmentDTO extends BaseDTO {
+public class ResearchFieldDTO extends BaseDTO {
     private Integer id;
+
+    @NotEmpty(message = "Tên không được để trống")
     private String name;
+
+    @NotEmpty(message = "Mô tả không được để trống")
     private String description;
-    private String imageUrl;
-    private String phoneNumber;
-    private String email;
     private Boolean delFlag;
-    private String logoPublicId;
 }

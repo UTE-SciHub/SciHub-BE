@@ -36,6 +36,8 @@ public class User extends BaseEntity implements UserDetails {
 
     private String imageUrl;
 
+    private String imagePublicId;
+
     private LocalDateTime lastLogin;
 
     @Enumerated(EnumType.STRING)

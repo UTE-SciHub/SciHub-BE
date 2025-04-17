@@ -6,17 +6,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.ErrorCode;
 import vn.thanhtuanle.common.enums.RegistrationPeriodsStatus;
 import vn.thanhtuanle.common.enums.RoleType;
 import vn.thanhtuanle.common.mapper.ExcelExporterFactory;
 import vn.thanhtuanle.common.mapper.RegistrationPeriodExcelRowMapper;
+import vn.thanhtuanle.common.service.CloudinaryService;
 import vn.thanhtuanle.common.service.ExcelExporter;
 import vn.thanhtuanle.common.service.FileUtil;
 import vn.thanhtuanle.entity.RegistrationPeriod;
@@ -37,6 +40,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -49,9 +53,13 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     private final ExcelExporterFactory excelExporterFactory;
     @Qualifier("registrationPeriodExcelRowMapper")
     private final RegistrationPeriodExcelRowMapper excelRowMapper;
+    private final CloudinaryService cloudinaryService;
 
     private static final String UPLOAD_DIR = "uploads";
     private static final Path storageFolder = Paths.get(UPLOAD_DIR);
+
+    @Value("${spring.servlet.multipart.max-file-size}")
+    private DataSize MAX_FILE_SIZE;
 
     private final List<String> EXCEL_HEADERS = List.of(
             "Mã đợt đăng ký",
@@ -98,9 +106,33 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         registrationPeriod.setId(id);
         registrationPeriod.setStatus(RegistrationPeriodsStatus.OPEN);
 
-        String decisionFilePath = FileUtil.generatedFileName(decisionFile);
-        FileUtil.saveFile(decisionFilePath, decisionFile);
-        registrationPeriod.setDecisionFile(decisionFilePath);
+        String fileUrl = null;
+        String publicId = null;
+        if (decisionFile != null && !decisionFile.isEmpty()) {
+            if (decisionFile.getSize() > MAX_FILE_SIZE.toBytes()) {
+                throw new IllegalArgumentException("File vượt quá kích thước tối đa cho phép: " + MAX_FILE_SIZE + " bytes");
+            }
+
+            String fileName = decisionFile.getOriginalFilename();
+            if (fileName != null && fileName.toLowerCase().endsWith(".pdf")) {
+                try {
+                    Map result = cloudinaryService.upload(decisionFile);
+                    fileUrl = String.valueOf(result.get("url"));
+                    publicId = String.valueOf(result.get("public_id"));
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload PDF file", e);
+                }
+            } else {
+                throw new IllegalArgumentException("File phải có định dạng PDF (.pdf)");
+            }
+        } else {
+            throw new IllegalArgumentException("File PDF không được để trống hoặc null");
+        }
+
+        if (fileUrl != null && publicId != null) {
+            registrationPeriod.setDecisionFile(fileUrl);
+            registrationPeriod.setFilePublicId(publicId);
+        }
 
         registrationPeriod = registrationPeriodRepository.saveAndFlush(registrationPeriod);
 
@@ -175,12 +207,37 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         RegistrationPeriod registrationPeriod = registrationPeriodRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.REGISTRATION_PERIOD_NOT_FOUND));
 
+        String oldPublicId = registrationPeriod.getFilePublicId();
+        String oldDecisionFile = registrationPeriod.getDecisionFile();
         modelMapper.map(req, registrationPeriod);
 
+        String fileUrl = null;
+        String publicId = null;
         if (decisionFile != null && !decisionFile.isEmpty()) {
-            String decisionFileName = FileUtil.generatedFileName(decisionFile);
-            FileUtil.saveFile(decisionFileName, decisionFile);
-            registrationPeriod.setDecisionFile(decisionFileName);
+            if (decisionFile.getSize() > MAX_FILE_SIZE.toBytes()) {
+                throw new IllegalArgumentException("File vượt quá kích thước tối đa cho phép: " + MAX_FILE_SIZE + " bytes");
+            }
+
+            String fileName = decisionFile.getOriginalFilename();
+            if (fileName != null && fileName.toLowerCase().endsWith(".pdf")) {
+                try {
+                    Map result = cloudinaryService.upload(decisionFile);
+                    fileUrl = String.valueOf(result.get("url"));
+                    publicId = String.valueOf(result.get("public_id"));
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload PDF file", e);
+                }
+            } else {
+                throw new IllegalArgumentException("File phải có định dạng PDF (.pdf)");
+            }
+        }
+
+        if (fileUrl != null && publicId != null) {
+            registrationPeriod.setDecisionFile(fileUrl);
+            registrationPeriod.setFilePublicId(publicId);
+        } else {
+            registrationPeriod.setDecisionFile(oldDecisionFile);
+            registrationPeriod.setFilePublicId(oldPublicId);
         }
 
         registrationPeriod = registrationPeriodRepository.save(registrationPeriod);

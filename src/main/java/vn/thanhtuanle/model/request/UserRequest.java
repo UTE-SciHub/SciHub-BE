@@ -2,6 +2,7 @@ package vn.thanhtuanle.model.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -28,7 +29,7 @@ public class UserRequest {
     @NotEmpty(message = "Số điện thoại không được để trống")
     private String phoneNumber;
 
-    @Pattern(regexp = "^MALE|FEMALE|OTHER$", message = "Giới tính không hợp lệ")
+    @NotNull(message = "Giới tính không được để trống")
     private Gender gender;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)

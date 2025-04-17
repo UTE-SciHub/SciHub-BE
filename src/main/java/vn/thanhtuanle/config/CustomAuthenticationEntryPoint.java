@@ -20,7 +20,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
         BaseResponse<?> responseData = BaseResponse.builder()
-                .status(HttpStatus.FORBIDDEN.value())
+                .status(HttpStatus.OK.value())
                 .code(FORBIDDEN_ERROR.getCode())
                 .message(FORBIDDEN_ERROR.getMessage())
                 .build();

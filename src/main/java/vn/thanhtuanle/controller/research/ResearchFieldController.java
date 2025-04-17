@@ -1,4 +1,4 @@
-package vn.thanhtuanle.controller.department;
+package vn.thanhtuanle.controller.research;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,29 +9,24 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.Constant;
-import vn.thanhtuanle.model.dto.DepartmentDTO;
-import vn.thanhtuanle.model.request.DepartmentRequest;
+import vn.thanhtuanle.model.dto.ResearchFieldDTO;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.model.response.PageResponse;
-import vn.thanhtuanle.service.DepartmentService;
+import vn.thanhtuanle.service.ResearchFieldService;
 
-import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/departments")
-@Tag(name = "Department Controller")
+@RequestMapping("/api/v1/research-fields")
+@Tag(name = "Research Field Controller")
 @RequiredArgsConstructor
-public class DepartmentController {
+public class ResearchFieldController {
+    private final ResearchFieldService researchFieldService;
 
-    private final DepartmentService departmentService;
-
-    @Operation(summary = "Department List API", description = "Get paginated list of departments with sorting and filtering")
+    @Operation(summary = "Research Field List API", description = "Get paginated list of research fields with sorting and filtering")
     @GetMapping
     public ResponseEntity<BaseResponse<?>> getAll(
             @RequestParam(value = "p", defaultValue = "1") int page,
@@ -46,9 +41,9 @@ public class DepartmentController {
         Sort.Direction direction = "desc".equalsIgnoreCase(order) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(adjustedPage, size, direction, sort);
 
-        Page<DepartmentDTO> pageResult = departmentService.findAll(pageable, query);
+        Page<ResearchFieldDTO> pageResult = researchFieldService.findAll(pageable, query);
 
-        PageResponse<?> pageResponse = PageResponse.<List<DepartmentDTO>>builder()
+        PageResponse<?> pageResponse = PageResponse.<List<ResearchFieldDTO>>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
                 .currentPage(page)
@@ -62,45 +57,48 @@ public class DepartmentController {
         return ResponseEntity.status(HttpStatus.OK).body(pageResponse);
     }
 
-    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public ResponseEntity<BaseResponse<DepartmentDTO>> createDepartment(
-            @Valid @RequestPart("data") DepartmentRequest req,
-            @RequestParam(value = "logoFile", required = false) MultipartFile logoFile) throws IOException {
-        return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<DepartmentDTO>builder()
+    @PostMapping
+    public ResponseEntity<BaseResponse<ResearchFieldDTO>> create(@Valid @RequestBody ResearchFieldDTO req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<ResearchFieldDTO>builder()
                 .status(HttpStatus.CREATED.value())
                 .message(Constant.CREATED_SUCCESSFULLY.getValue())
-                .data(departmentService.createDepartment(req, logoFile))
+                .data(researchFieldService.createResearchField(req))
                 .build());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<DepartmentDTO>> getDepartmentById(@PathVariable Integer id) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<DepartmentDTO>builder()
+    public ResponseEntity<BaseResponse<ResearchFieldDTO>> getById(@PathVariable Integer id) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchFieldDTO>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(departmentService.getDepartmentById(id))
+                .data(researchFieldService.getResearchFieldById(id))
                 .build());
     }
 
-    @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-    public ResponseEntity<BaseResponse<DepartmentDTO>> updateDepartment(
-            @PathVariable Integer id,
-            @RequestPart("data") DepartmentDTO req,
-            @RequestPart(value = "logoFile", required = false) MultipartFile logoFile
-    ) throws IOException {
-        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<DepartmentDTO>builder()
+    @PutMapping("/{id}")
+    public ResponseEntity<BaseResponse<ResearchFieldDTO>> update(@PathVariable Integer id, @Valid @RequestBody ResearchFieldDTO req) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchFieldDTO>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(departmentService.updateDepartment(id, req, logoFile))
+                .data(researchFieldService.updateResearchField(id, req))
                 .build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<BaseResponse<Void>> deleteDepartment(@PathVariable Integer id) {
-        departmentService.deleteDepartment(id);
-        return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<Void>builder()
+    public ResponseEntity<BaseResponse<?>> delete(@PathVariable Integer id) {
+        researchFieldService.deleteResearchField(id);
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
+                .build());
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<BaseResponse<ResearchFieldDTO>> updateStatus(@PathVariable Integer id, @RequestBody Boolean isActive) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchFieldDTO>builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(researchFieldService.updateResearchFieldStatus(id, isActive))
                 .build());
     }
 }

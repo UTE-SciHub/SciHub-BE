@@ -11,20 +11,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "tbl_departments")
-public class Department extends BaseEntity {
+@Table(name = "tbl_research_types")
+public class ResearchType extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     private String name;
     private String description;
-    private String imageUrl;
-    private String phoneNumber;
-    private String email;
     private Boolean delFlag;
-    private String logoPublicId;
 
-    @OneToMany(mappedBy = "department")
+    @OneToMany(mappedBy = "researchType")
     private List<Topic> topics;
 }

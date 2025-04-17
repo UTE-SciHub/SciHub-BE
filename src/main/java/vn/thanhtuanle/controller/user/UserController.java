@@ -71,13 +71,15 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).body(pageResponse);
     }
 
-    @Operation(summary = "User API", description = "Users API")
-    @PostMapping
-    public ResponseEntity<?> create(@Valid @RequestBody UserRequest req) {
+    @Operation(summary = "User API", description = "Create Users API")
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<?> create(@Valid @RequestPart("data") UserRequest req,
+                                    @RequestPart(value = "avatar", required = false) MultipartFile avatar
+    ) throws IOException {
         return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<UserDTO>builder()
                 .status(HttpStatus.CREATED.value())
                 .message(Constant.CREATED_SUCCESSFULLY.getValue())
-                .data(userService.create(req))
+                .data(userService.create(req, avatar))
                 .build());
     }
 

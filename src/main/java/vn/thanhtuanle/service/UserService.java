@@ -16,7 +16,7 @@ import java.util.Map;
 
 public interface UserService {
     @Transactional
-    UserDTO create(UserRequest req);
+    UserDTO create(UserRequest req, MultipartFile avatar) throws IOException;
 
     UserDTO getCurrentUser(String token);
 

@@ -20,4 +20,5 @@ public class RegistrationPeriodDTO extends BaseDTO {
     private RegistrationPeriodsStatus status;
     private String description;
     private String imageUrl;
+    private String filePublicId;
 }

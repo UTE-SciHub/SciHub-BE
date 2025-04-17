@@ -61,9 +61,9 @@ public class SecurityConfig {
                         .requestMatchers(WHITE_LIST).permitAll()
                         .anyRequest().authenticated()
                 )
-                .exceptionHandling(exp -> exp
-                        .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
-                )
+//                .exceptionHandling(exp -> exp
+//                        .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
+//                )
                 .sessionManagement(manager -> manager
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )

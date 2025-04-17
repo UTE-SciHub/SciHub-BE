@@ -48,4 +48,6 @@ public class RegistrationPeriod extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
+
+    private String filePublicId;
 }

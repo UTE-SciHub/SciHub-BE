@@ -54,7 +54,7 @@ public class GlobalExceptionHandler {
     ResponseEntity<BaseResponse<?>> handlingAppException(AppException exception, WebRequest request) {
         BaseResponse<?> error = BaseResponse.builder()
                 .code(exception.getErrorCode().getCode())
-                .status(HttpStatus.UNAUTHORIZED.value())
+                .status(exception.getErrorCode().getCode())
                 .message(exception.getMessage())
                 .timestamp(new Date())
                 .path(request.getDescription(false).replace("uri=", ""))
@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<BaseResponse<Object>> handleResourceNotFoundException(ResourceNotFoundException ex) {
 
         BaseResponse<Object> responseObject = BaseResponse.<Object>builder()
-                .status(HttpStatus.BAD_REQUEST.value())
+                .status(HttpStatus.NOT_FOUND.value())
                 .message(ex.getMessage())
                 .build();
 
@@ -100,7 +100,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<BaseResponse<?>> handleTokenExpiredException(TokenExpiredException ex, WebRequest request) {
         BaseResponse<?> response = BaseResponse.builder()
                 .code(ErrorCode.TOKEN_EXPIRED.getCode())
-                .status(HttpStatus.UNAUTHORIZED.value())
+                .status(HttpStatus.OK.value())
                 .message(ex.getMessage())
                 .timestamp(new Date())
                 .path(request.getDescription(false).replace("uri=", ""))
