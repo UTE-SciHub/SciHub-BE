@@ -209,6 +209,7 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
 
         String oldPublicId = registrationPeriod.getFilePublicId();
         String oldDecisionFile = registrationPeriod.getDecisionFile();
+        RegistrationPeriodsStatus oldStatus = registrationPeriod.getStatus();
         modelMapper.map(req, registrationPeriod);
 
         String fileUrl = null;
@@ -238,6 +239,12 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         } else {
             registrationPeriod.setDecisionFile(oldDecisionFile);
             registrationPeriod.setFilePublicId(oldPublicId);
+        }
+
+        if (req.getStatus() != null) {
+            registrationPeriod.setStatus(req.getStatus());
+        } else {
+            registrationPeriod.setStatus(oldStatus);
         }
 
         registrationPeriod = registrationPeriodRepository.save(registrationPeriod);

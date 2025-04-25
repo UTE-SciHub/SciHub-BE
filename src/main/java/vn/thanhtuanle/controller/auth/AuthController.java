@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.model.request.LoginRequest;
 import vn.thanhtuanle.model.request.RefreshTokenRequest;
+import vn.thanhtuanle.model.request.TokenRequest;
 import vn.thanhtuanle.model.response.AuthResponse;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.service.AuthService;
@@ -39,6 +40,15 @@ public class AuthController {
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
                 .data(authService.refreshToken(refreshToken.getRefreshToken()))
+                .build());
+    }
+
+    @PostMapping("/introspect")
+    public ResponseEntity<BaseResponse<Boolean>> introspect(@RequestBody TokenRequest token) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<Boolean>builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(authService.introspect(token))
                 .build());
     }
 }

@@ -21,7 +21,7 @@ public class ResearchFieldServiceImpl implements ResearchFieldService {
     private final ModelMapper modelMapper;
 
     @Override
-    public Page<ResearchFieldDTO> findAll(Pageable pageable, String query) {
+    public Page<ResearchFieldDTO> findAll(Pageable pageable, String query, Boolean delFlag) {
         Specification<ResearchField> spec = Specification.where(null);
 
         if (query != null && !query.trim().isEmpty()) {
@@ -33,8 +33,13 @@ public class ResearchFieldServiceImpl implements ResearchFieldService {
             });
         }
 
-        Page<ResearchField> ResearchFields = researchFieldRepository.findAll(spec, pageable);
-        return ResearchFields.map(ResearchField -> modelMapper.map(ResearchField, ResearchFieldDTO.class));
+        if (delFlag != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("delFlag"), delFlag));
+        }
+
+        Page<ResearchField> researchFields = researchFieldRepository.findAll(spec, pageable);
+        return researchFields.map(r -> modelMapper.map(r, ResearchFieldDTO.class));
     }
 
     @Transactional

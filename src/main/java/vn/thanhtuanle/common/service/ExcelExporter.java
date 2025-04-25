@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
+import vn.thanhtuanle.common.mapper.DepartmentExcelRowMapper;
 import vn.thanhtuanle.common.mapper.RegistrationPeriodExcelRowMapper;
 import vn.thanhtuanle.common.mapper.UserExcelRowMapper;
 
@@ -38,6 +39,10 @@ public class ExcelExporter<T> {
 
             if(rowMapper instanceof RegistrationPeriodExcelRowMapper registrationPeriodExcelRowMapper) {
                 registrationPeriodExcelRowMapper.addDropdowns(sheet, 1, data.size());
+            }
+
+            if(rowMapper instanceof DepartmentExcelRowMapper departmentExcelRowMapper) {
+                departmentExcelRowMapper.addDropdowns(sheet, 1, data.size());
             }
 
             workbook.write(outputStream);

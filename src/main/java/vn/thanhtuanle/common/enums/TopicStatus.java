@@ -16,6 +16,7 @@ public enum TopicStatus {
     EVALUATING,            // Đang đánh giá kết quả
     COMPLETED,             // Hoàn thành
     ARCHIVED,              // Lưu trữ
-    CANCELLED              // Bị huỷ
+    CANCELLED,              // Bị huỷ
+    PENDING,               // Đang chờ xử lý
 }
 

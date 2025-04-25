@@ -3,12 +3,16 @@ package vn.thanhtuanle.service.impl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import vn.thanhtuanle.common.mapper.ExcelExporterFactory;
 import vn.thanhtuanle.common.service.CloudinaryService;
+import vn.thanhtuanle.common.service.ExcelExporter;
+import vn.thanhtuanle.common.service.ExcelRowMapper;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.DepartmentDTO;
 import vn.thanhtuanle.service.DepartmentService;
@@ -17,6 +21,7 @@ import vn.thanhtuanle.entity.Department;
 import vn.thanhtuanle.repository.DepartmentRepository;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import javax.imageio.ImageIO;
 
@@ -27,9 +32,20 @@ public class DepartmentServiceImpl implements DepartmentService {
     private final DepartmentRepository departmentRepository;
     private final ModelMapper modelMapper;
     private final CloudinaryService cloudinaryService;
+    private final ExcelExporterFactory excelExporterFactory;
+    @Qualifier("departmentExcelRowMapper")
+    private final ExcelRowMapper<Department> departmentExcelRowMapper;
+
+    private final List<String> EXCEL_HEADERS = List.of(
+            "ID",
+            "Tên phòng ban",
+            "Số điện thoại",
+            "Email",
+            "Trạng thái"
+    );
 
     @Override
-    public Page<DepartmentDTO> findAll(Pageable pageable, String query) {
+    public Page<DepartmentDTO> findAll(Pageable pageable, String query, Boolean delFlag) {
         Specification<Department> spec = Specification.where(null);
 
         if (query != null && !query.trim().isEmpty()) {
@@ -40,6 +56,11 @@ public class DepartmentServiceImpl implements DepartmentService {
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), searchPattern)
                 );
             });
+        }
+
+        if (delFlag != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("delFlag"), delFlag));
         }
 
         Page<Department> departments = departmentRepository.findAll(spec, pageable);
@@ -143,5 +164,31 @@ public class DepartmentServiceImpl implements DepartmentService {
         department.setDelFlag(true);
 
         departmentRepository.save(department);
+    }
+
+    @Override
+    public byte[] exportExcel(String query, Boolean delFlag) throws IOException {
+        Specification<Department> spec = Specification.where(null);
+
+        if (query != null && !query.trim().isEmpty()) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) -> {
+                String searchPattern = "%" + query.toLowerCase() + "%";
+                return criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), searchPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), searchPattern)
+                );
+            });
+        }
+
+        if (delFlag != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("delFlag"), delFlag));
+        }
+
+        List<Department> departments = departmentRepository.findAll(spec);
+
+        ExcelExporter<Department> exporter = excelExporterFactory.create(EXCEL_HEADERS, departments, departmentExcelRowMapper);
+
+        return exporter.exportToExcel();
     }
 }

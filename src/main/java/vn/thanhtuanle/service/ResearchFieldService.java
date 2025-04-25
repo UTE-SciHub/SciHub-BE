@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import vn.thanhtuanle.model.dto.ResearchFieldDTO;
 
 public interface ResearchFieldService {
-    Page<ResearchFieldDTO> findAll(Pageable pageable, String query);
+    Page<ResearchFieldDTO> findAll(Pageable pageable, String query, Boolean delFlag);
 
     @Transactional
     ResearchFieldDTO createResearchField(ResearchFieldDTO req);

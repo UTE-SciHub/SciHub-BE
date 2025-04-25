@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface DepartmentService {
 
-    Page<DepartmentDTO> findAll(Pageable pageable, String query);
+    Page<DepartmentDTO> findAll(Pageable pageable, String query, Boolean delFlag);
 
     DepartmentDTO createDepartment(DepartmentRequest departmentRequest, MultipartFile logoFile) throws IOException;
 
@@ -21,4 +21,6 @@ public interface DepartmentService {
     DepartmentDTO updateDepartment(Integer id, DepartmentDTO departmentRequest, MultipartFile logoFile) throws IOException;
 
     void deleteDepartment(Integer id);
+
+    byte[] exportExcel(String query, Boolean delFlag) throws IOException;
 }

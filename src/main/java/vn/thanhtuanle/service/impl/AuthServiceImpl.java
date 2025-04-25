@@ -5,6 +5,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import vn.thanhtuanle.common.enums.ErrorCode;
@@ -15,13 +16,13 @@ import vn.thanhtuanle.entity.Token;
 import vn.thanhtuanle.entity.User;
 import vn.thanhtuanle.exception.AppException;
 import vn.thanhtuanle.model.request.LoginRequest;
+import vn.thanhtuanle.model.request.TokenRequest;
 import vn.thanhtuanle.model.response.AuthResponse;
 import vn.thanhtuanle.repository.TokenRepository;
 import vn.thanhtuanle.repository.UserRepository;
 import vn.thanhtuanle.service.AuthService;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +33,11 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final TokenRepository tokenRepository;
 
-    private void savedUserToken(User user, String jwtToken) {
+    private void savedUserToken(User user, String jwtToken, TokenType type) {
         Token token = Token.builder()
                 .user(user)
                 .token(jwtToken)
-                .tokenType(TokenType.BEARER)
+                .tokenType(type)
                 .revoked(false)
                 .expired(false)
                 .build();
@@ -80,7 +81,9 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtService.generateRefreshToken(user);
 
         revokeAllUserTokens(user);
-        savedUserToken(user, jwtToken);
+
+        savedUserToken(user, jwtToken, TokenType.ACCESS);
+        savedUserToken(user, refreshToken, TokenType.REFRESH);
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities())
@@ -89,7 +92,6 @@ public class AuthServiceImpl implements AuthService {
         log.info("Login successful for email: {}", req.getEmail());
 
         user.setLastLogin(LocalDateTime.now());
-
         userRepository.save(user);
 
         return AuthResponse.builder()
@@ -99,9 +101,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public boolean introspect(String token) {
-        Token existedToken = tokenRepository.findByToken(token)
-                .orElse(null);
+    public boolean introspect(TokenRequest token) {
+        if (token.getToken().startsWith("Bearer ")) {
+            token.setToken(token.getToken().substring(7));
+        }
+
+        Token existedToken = tokenRepository.findByToken(token.getToken()).orElse(null);
 
         if (existedToken == null) {
             return false;
@@ -125,7 +130,7 @@ public class AuthServiceImpl implements AuthService {
             String accessToken = jwtService.generateToken(user);
 
             revokeAllUserTokens(user);
-            savedUserToken(user, accessToken);
+            savedUserToken(user, accessToken, TokenType.ACCESS);
 
             log.info("Refresh token successful for email: {}", email);
             return AuthResponse.builder()
@@ -136,5 +141,22 @@ public class AuthServiceImpl implements AuthService {
 
         log.warn("Refresh token failed for email: {} - Reason: Invalid token", email);
         throw new AppException(ErrorCode.INVALID_TOKEN);
+    }
+
+    @Override
+    public void logout() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.getPrincipal() instanceof User user) {
+            log.info("Logout attempt for email: {}", user.getEmail());
+
+            revokeAllUserTokens(user);
+            SecurityContextHolder.clearContext();
+
+            log.info("Logout successful for email: {}", user.getEmail());
+        } else {
+            log.warn("Logout attempt with no authenticated user");
+            throw new AppException(ErrorCode.NOT_AUTHENTICATED);
+        }
     }
 }

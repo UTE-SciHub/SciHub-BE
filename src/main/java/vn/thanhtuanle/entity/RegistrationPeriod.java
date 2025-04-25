@@ -44,6 +44,7 @@ public class RegistrationPeriod extends BaseEntity {
     private RegistrationPeriodsStatus status;
 
     @Column(columnDefinition = "TEXT")
+    @Lob
     private String description;
 
     @Column(columnDefinition = "TEXT")

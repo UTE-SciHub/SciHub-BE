@@ -58,9 +58,9 @@ application:
   security:
     jwt:
       secret-key: 6250655368566B5970337336763979244226452948404D635166546A576E5A71
-      expiration: 86400000 # 1 day
+      expiration: 86400000
       refresh-token:
-        expiration: 604800000 # 7 days
+        expiration: 259200000
   user:
     password:
       default: ${USER_PASSWORD_DEFAULT}

@@ -82,6 +82,7 @@ public class JwtService {
         return Jwts
                 .parserBuilder()
                 .setSigningKey(getSingInKey())
+                .setAllowedClockSkewSeconds(60)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

@@ -5,6 +5,8 @@ import lombok.*;
 import vn.thanhtuanle.common.enums.TopicStatus;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -18,14 +20,97 @@ public class Topic extends BaseEntity {
     @Id
     @Column(updatable = false, nullable = false)
     private String id;
+
+    @Column(name = "vietnamese_name")
     private String vietnameseName;
+
+    @Column(name = "english_name")
     private String englishName;
-    private String objective;
+
+    @Column(name = "principal_investigator")
+    private String principalInvestigator;
+
+    @Lob
+    @Column(name = "objectives", columnDefinition = "TEXT")
+    private String objectives;
+
+    @Lob
+    @Column(name = "main_content", columnDefinition = "TEXT")
     private String mainContent;
+
+    @Lob
+    @Column(name = "practical_applications", columnDefinition = "TEXT")
+    private String practicalApplications;
+
+    @Lob
+    @Column(name = "expected_products", columnDefinition = "JSON")
+    private String expectedProducts;
+
+    @Lob
+    @Column(name = "novelty", columnDefinition = "TEXT")
+    private String novelty;
+
+    @Lob
+    @Column(name = "expected_risks", columnDefinition = "TEXT")
+    private String expectedRisks;
+
+    @ElementCollection
+    @CollectionTable(name = "topic_keywords", joinColumns = @JoinColumn(name = "topic_id"))
+    @Column(name = "keyword")
+    private List<String> keywords = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "topic_transfer_forms", joinColumns = @JoinColumn(name = "topic_id"))
+    @Column(name = "transfer_form")
+    private List<String> transferForm = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "topic_files", joinColumns = @JoinColumn(name = "topic_id"))
+    @Column(name = "file_path")
+    private List<AttachedDocument> attachedDocuments = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
     private TopicStatus status;
+
     private LocalDate startDate;
+
+    @Column(name = "duration_in_months")
     private int durationInMonths;
+
+    @Column(name = "end_year")
     private int endYear;
+
+    @Column(name = "topic_code", unique = true)
+    private String topicCode;
+
+    @Column(name = "total_budget")
+    private long totalBudget;
+
+    @Column(name = "funding_source")
+    private String fundingSource;
+
+    @Column(name = "approved_budget")
+    private long approvedBudget;
+
+    @Column(name = "remaining_budget")
+    private long remainingBudget;
+
+    @Lob
+    @Column(name = "budget_breakdown", columnDefinition = "JSON")
+    private String budgetBreakdown;
+
+    @Column(name = "council")
+    private String council;
+
+    @Column(name = "registration_period")
+    private String registrationPeriod;
+
+    @Column(name = "commitment")
+    private boolean commitment;
+
+    @Lob
+    @Column(name = "additional_notes", columnDefinition = "TEXT")
+    private String additionalNotes;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
@@ -42,4 +127,20 @@ public class Topic extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "research_type_id")
     private ResearchType researchType;
+
+    @Embeddable
+    @Setter
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AttachedDocument {
+        @Column(name = "file_path")
+        private String filePath;
+
+        @Column(name = "description")
+        private String description;
+
+        @Column(name = "public_id")
+        private String publicId;
+    }
 }

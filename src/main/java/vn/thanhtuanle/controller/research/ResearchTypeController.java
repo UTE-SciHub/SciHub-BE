@@ -12,21 +12,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.thanhtuanle.common.enums.Constant;
-import vn.thanhtuanle.model.dto.ResearchFieldDTO;
+import vn.thanhtuanle.model.dto.ResearchTypeDTO;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.model.response.PageResponse;
-import vn.thanhtuanle.service.ResearchFieldService;
+import vn.thanhtuanle.service.ResearchTypeService;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/research-fields")
-@Tag(name = "Research Field Controller")
+@RequestMapping("/api/v1/research-types")
+@Tag(name = "Research Type Controller")
 @RequiredArgsConstructor
-public class ResearchFieldController {
-    private final ResearchFieldService researchFieldService;
+public class ResearchTypeController {
+    private final ResearchTypeService researchTypeService;
 
-    @Operation(summary = "Research Field List API", description = "Get paginated list of research fields with sorting and filtering")
+    @Operation(summary = "Research Type List API", description = "Get paginated list of research Types with sorting and filtering")
     @GetMapping
     public ResponseEntity<BaseResponse<?>> getAll(
             @RequestParam(value = "p", defaultValue = "1") int page,
@@ -42,9 +42,9 @@ public class ResearchFieldController {
         Sort.Direction direction = "desc".equalsIgnoreCase(order) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(adjustedPage, size, direction, sort);
 
-        Page<ResearchFieldDTO> pageResult = researchFieldService.findAll(pageable, query, delFlag);
+        Page<ResearchTypeDTO> pageResult = researchTypeService.findAll(pageable, query, delFlag);
 
-        PageResponse<?> pageResponse = PageResponse.<List<ResearchFieldDTO>>builder()
+        PageResponse<?> pageResponse = PageResponse.<List<ResearchTypeDTO>>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
                 .currentPage(page)
@@ -59,35 +59,35 @@ public class ResearchFieldController {
     }
 
     @PostMapping
-    public ResponseEntity<BaseResponse<ResearchFieldDTO>> create(@Valid @RequestBody ResearchFieldDTO req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<ResearchFieldDTO>builder()
+    public ResponseEntity<BaseResponse<ResearchTypeDTO>> create(@Valid @RequestBody ResearchTypeDTO req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<ResearchTypeDTO>builder()
                 .status(HttpStatus.CREATED.value())
                 .message(Constant.CREATED_SUCCESSFULLY.getValue())
-                .data(researchFieldService.createResearchField(req))
+                .data(researchTypeService.createResearchType(req))
                 .build());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<ResearchFieldDTO>> getById(@PathVariable Integer id) {
-        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchFieldDTO>builder()
+    public ResponseEntity<BaseResponse<ResearchTypeDTO>> getById(@PathVariable Integer id) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchTypeDTO>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(researchFieldService.getResearchFieldById(id))
+                .data(researchTypeService.getResearchTypeById(id))
                 .build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BaseResponse<ResearchFieldDTO>> update(@PathVariable Integer id, @Valid @RequestBody ResearchFieldDTO req) {
-        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchFieldDTO>builder()
+    public ResponseEntity<BaseResponse<ResearchTypeDTO>> update(@PathVariable Integer id, @Valid @RequestBody ResearchTypeDTO req) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchTypeDTO>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(researchFieldService.updateResearchField(id, req))
+                .data(researchTypeService.updateResearchType(id, req))
                 .build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<BaseResponse<?>> delete(@PathVariable Integer id) {
-        researchFieldService.deleteResearchField(id);
+        researchTypeService.deleteResearchType(id);
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
@@ -95,11 +95,11 @@ public class ResearchFieldController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<BaseResponse<ResearchFieldDTO>> updateStatus(@PathVariable Integer id, @RequestBody Boolean isActive) {
-        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchFieldDTO>builder()
+    public ResponseEntity<BaseResponse<ResearchTypeDTO>> updateStatus(@PathVariable Integer id, @RequestBody Boolean isActive) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<ResearchTypeDTO>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(researchFieldService.updateResearchFieldStatus(id, isActive))
+                .data(researchTypeService.updateResearchTypeStatus(id, isActive))
                 .build());
     }
 }
