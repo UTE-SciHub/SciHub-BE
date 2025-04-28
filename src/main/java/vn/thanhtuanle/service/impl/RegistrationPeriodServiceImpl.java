@@ -291,18 +291,14 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
                     criteriaBuilder.equal(root.get("status"), status));
         }
 
-        if (startDate != null && endDate != null) {
-            spec = spec.and((root, query1, cb) ->
-                    cb.and(
-                            cb.greaterThanOrEqualTo(root.get("startDate"), startDate),
-                            cb.lessThanOrEqualTo(root.get("endDate"), endDate)
-                    ));
-        } else if (startDate != null) {
-            spec = spec.and((root, query1, cb) ->
-                    cb.equal(root.get("startDate"), startDate));
-        } else if (endDate != null) {
-            spec = spec.and((root, query1, cb) ->
-                    cb.equal(root.get("endDate"), endDate));
+        if (startDate != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("startDate"), startDate));
+        }
+
+        if (endDate != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.lessThanOrEqualTo(root.get("endDate"), endDate));
         }
 
         if (query != null && !query.trim().isEmpty()) {

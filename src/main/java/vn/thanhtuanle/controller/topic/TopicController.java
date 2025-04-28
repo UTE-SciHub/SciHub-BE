@@ -1,12 +1,9 @@
 package vn.thanhtuanle.controller.topic;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
-import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -20,16 +17,16 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.common.enums.TopicStatus;
-import vn.thanhtuanle.model.dto.AttachedDocumentDTO;
+import vn.thanhtuanle.model.dto.TopicDTO;
+import vn.thanhtuanle.model.request.AttachedDocumentCreation;
 import vn.thanhtuanle.model.request.TopicCreateRequest;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.model.response.PageResponse;
 import vn.thanhtuanle.service.TopicService;
 
-import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Slf4j
 @RestController
@@ -39,8 +36,6 @@ import java.util.Set;
 public class TopicController {
 
     private final TopicService topicService;
-    private final ObjectMapper objectMapper;
-    private final Validator validator;
 
     @Operation(summary = "Topic List API", description = "Get paginated list of topic with sorting and filtering")
     @GetMapping
@@ -51,7 +46,14 @@ public class TopicController {
             @RequestParam(value = "order", defaultValue = "desc") String order,
             @RequestParam(value = "q", required = false) String query,
             @RequestParam(value = "status", required = false) TopicStatus status,
-            @RequestParam(value = "departmentId", required = false) Integer departmentId) {
+            @RequestParam(value = "departmentId", required = false) Integer departmentId,
+            @RequestParam(value = "researchTypeId", required = false) Integer researchTypeId,
+            @RequestParam(value = "researchFieldId", required = false) Integer researchFieldId,
+            @RequestParam(value = "categoryId", required = false) Integer categoryId,
+            @RequestParam(value = "startDate", required = false) LocalDate startDate,
+            @RequestParam(value = "endDate", required = false) LocalDate endDate,
+            @RequestParam(value = "minBudget", required = false) Long minBudget,
+            @RequestParam(value = "investigator", required = false) String investigator) {
 
         int adjustedPage = page - 1;
         if (adjustedPage < 0) adjustedPage = 0;
@@ -59,9 +61,9 @@ public class TopicController {
         Sort.Direction direction = "desc".equalsIgnoreCase(order) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(adjustedPage, size, direction, sort);
 
-        Page<TopicCreateRequest> pageResult = topicService.getAll(pageable, query, status, departmentId);
+        Page<TopicDTO> pageResult = topicService.getAll(pageable, query, status, departmentId, researchTypeId, researchFieldId, categoryId, startDate, endDate, minBudget, investigator);
 
-        PageResponse<?> pageResponse = PageResponse.<List<TopicCreateRequest>>builder()
+        PageResponse<?> pageResponse = PageResponse.<List<TopicDTO>>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
                 .currentPage(page)
@@ -94,22 +96,10 @@ public class TopicController {
      ) throws JsonProcessingException {
          log.info("Received topic JSON: {}", topicCreateRequest);
 
-//         TopicCreateRequest topicCreateRequest;
-//         try {
-//             topicCreateRequest = objectMapper.readValue(req, TopicCreateRequest.class);
-//         } catch (IOException e) {
-//             log.error("Failed to parse topic JSON", e);
-//             return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
-//                     .status(HttpStatus.BAD_REQUEST.value())
-//                     .message("Invalid topic data format: " + e.getMessage())
-//                     .data(null)
-//                     .build());
-//         }
-
-         List<AttachedDocumentDTO> attachedDocuments = new ArrayList<>();
+         List<AttachedDocumentCreation> attachedDocuments = new ArrayList<>();
          if (files != null && descriptions != null && files.size() == descriptions.size()) {
              for (int i = 0; i < files.size(); i++) {
-                 AttachedDocumentDTO dto = new AttachedDocumentDTO();
+                 AttachedDocumentCreation dto = new AttachedDocumentCreation();
                  dto.setFile(files.get(i));
                  dto.setDescription(descriptions.get(i));
                  attachedDocuments.add(dto);
@@ -129,20 +119,6 @@ public class TopicController {
              }
          }
 
-         Set<ConstraintViolation<TopicCreateRequest>> violations = validator.validate(topicCreateRequest);
-         if (!violations.isEmpty()) {
-             StringBuilder errorMessage = new StringBuilder("Validation failed: ");
-             for (ConstraintViolation<TopicCreateRequest> violation : violations) {
-                 errorMessage.append(violation.getPropertyPath()).append(" - ").append(violation.getMessage()).append("; ");
-             }
-             log.error("Validation errors: {}", errorMessage);
-             return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
-                     .status(HttpStatus.BAD_REQUEST.value())
-                     .message(errorMessage.toString())
-                     .data(null)
-                     .build());
-         }
-
          log.info("Creating new topic with name: {}", topicCreateRequest.getVietnameseName());
 
          return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.builder()
@@ -159,6 +135,26 @@ public class TopicController {
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
                 .data(topicService.updateTopic(id, topicDTO))
+                .build());
+    }
+
+    @Operation(summary = "Exist Topic by topic code", description = "Check if topic exists by topic code")
+    @GetMapping("/exists-by-topic-code")
+    public ResponseEntity<BaseResponse<?>> existsByTopicCode(@RequestParam String topicCode) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(topicService.existsByTopicCode(topicCode))
+                .build());
+    }
+
+    @GetMapping("/statistics")
+    @Operation(summary = "Get Topic Statistics API", description = "Get topic statistics")
+    public ResponseEntity<BaseResponse<?>> getTopicStatistics() {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(topicService.getTopicStatistics())
                 .build());
     }
 }

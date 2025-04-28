@@ -1,13 +1,9 @@
-package vn.thanhtuanle.model.request;
+package vn.thanhtuanle.model.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import vn.thanhtuanle.common.enums.TopicStatus;
-import vn.thanhtuanle.model.dto.BaseDTO;
-import vn.thanhtuanle.model.dto.BudgetBreakdownDTO;
-import vn.thanhtuanle.model.dto.ExpectedProductDTO;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -18,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TopicCreateRequest {
+public class TopicDTO {
 
     private String id;
 
@@ -35,8 +31,7 @@ public class TopicCreateRequest {
 
     private String practicalApplications;
 
-    @NotEmpty(message = "Expected products cannot be empty")
-    private List<ExpectedProductDTO> expectedProducts = new ArrayList<>();
+    private String expectedProducts;
 
     private String novelty;
 
@@ -49,12 +44,13 @@ public class TopicCreateRequest {
 
     private TopicStatus status;
 
-    @NotNull(message = "Start date is required")
     private LocalDate startDate;
 
     private int durationInMonths;
 
     private int endYear;
+
+    private String topicCode;
 
     private long totalBudget;
 
@@ -64,8 +60,7 @@ public class TopicCreateRequest {
 
     private long remainingBudget;
 
-    @NotEmpty(message = "Budget breakdown cannot be empty")
-    private List<BudgetBreakdownDTO> budgetBreakdown = new ArrayList<>();
+    private String budgetBreakdown;
 
     private String council;
 
@@ -75,13 +70,13 @@ public class TopicCreateRequest {
 
     private String additionalNotes;
 
-    private String department;
+    private DepartmentDTO department;
 
-    private String field;
+    private ResearchFieldDTO field;
 
-    private String researchType;
+    private ResearchTypeDTO researchType;
 
-    private String category;
+    private CategoryDTO category;
 
-    private List<AttachedDocumentCreation> attachedDocuments;
+    private List<AttachedDocumentDTO> attachedDocuments;
 }

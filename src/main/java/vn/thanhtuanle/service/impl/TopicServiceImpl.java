@@ -13,25 +13,24 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
-import vn.thanhtuanle.common.enums.ErrorCode;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.common.service.CloudinaryService;
 import vn.thanhtuanle.entity.*;
-import vn.thanhtuanle.exception.AppException;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
-import vn.thanhtuanle.model.dto.AttachedDocumentDTO;
+import vn.thanhtuanle.model.dto.TopicDTO;
+import vn.thanhtuanle.model.request.AttachedDocumentCreation;
 import vn.thanhtuanle.model.request.TopicCreateRequest;
-import vn.thanhtuanle.repository.DepartmentRepository;
-import vn.thanhtuanle.repository.ResearchFieldRepository;
-import vn.thanhtuanle.repository.ResearchTypeRepository;
-import vn.thanhtuanle.repository.TopicRepository;
+import vn.thanhtuanle.model.response.TopicStatisticsResponse;
+import vn.thanhtuanle.repository.*;
 import vn.thanhtuanle.service.TopicService;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +42,7 @@ public class TopicServiceImpl implements TopicService {
     private final DepartmentRepository departmentRepository;
     private final ResearchFieldRepository researchFieldRepository;
     private final ResearchTypeRepository researchTypeRepository;
-//    private final CategoryRepository categoryRepository;
+    private final CategoryRepository categoryRepository;
     private final ObjectMapper objectMapper;
     private final CloudinaryService cloudinaryService;
 
@@ -51,15 +50,29 @@ public class TopicServiceImpl implements TopicService {
     private DataSize MAX_FILE_SIZE;
 
     @Override
-    public Page<TopicCreateRequest> getAll(Pageable pageable, String query, TopicStatus status, Integer departmentId) {
+    public Page<TopicDTO> getAll(
+            Pageable pageable,
+            String query,
+            TopicStatus status,
+            Integer departmentId,
+            Integer researchTypeId,
+            Integer researchFieldId,
+            Integer categoryId,
+            LocalDate startDate,
+            LocalDate endDate,
+            Long minBudget,
+            String investigator) {
+
         log.info("Fetching all topics with query: {}", query);
         Specification<Topic> spec = Specification.where(null);
 
+        // Filter by status
         if (status != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("status"), status));
         }
 
+        // Filter by query (search in vietnameseName and englishName)
         if (query != null && !query.trim().isEmpty()) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) -> {
                 String searchPattern = "%" + query.toLowerCase() + "%";
@@ -70,42 +83,80 @@ public class TopicServiceImpl implements TopicService {
             });
         }
 
+        // Filter by departmentId
         if (departmentId != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("department").get("id"), departmentId));
         }
 
+        // Filter by researchTypeId
+        if (researchTypeId != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("researchType").get("id"), researchTypeId));
+        }
+
+        // Filter by researchFieldId
+        if (researchFieldId != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("researchField").get("id"), researchFieldId));
+        }
+
+        // Filter by categoryId
+        if (categoryId != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("category").get("id"), categoryId));
+        }
+
+        // Filter by startDate (greater than or equal to)
+        if (startDate != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("startDate"), startDate));
+        }
+
+        // Filter by endDate (less than or equal to)
+        if (endDate != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.lessThanOrEqualTo(root.get("endDate"), endDate));
+        }
+
+        // Filter by minBudget (totalBudget greater than or equal to minBudget)
+        if (minBudget != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("totalBudget"), minBudget));
+        }
+
+        // Filter by investigator (search in principalInvestigator)
+        if (investigator != null && !investigator.trim().isEmpty()) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) -> {
+                String searchPattern = "%" + investigator.toLowerCase() + "%";
+                return criteriaBuilder.like(criteriaBuilder.lower(root.get("principalInvestigator")), searchPattern);
+            });
+        }
+
         Page<Topic> topics = topicRepository.findAll(spec, pageable);
 
         log.info("Found {} topics", topics.getTotalElements());
-        return topics.map(t -> modelMapper.map(t, TopicCreateRequest.class));
+        return topics.map(t -> modelMapper.map(t, TopicDTO.class));
     }
 
     @Override
-    public TopicCreateRequest findById(String id) {
+    public TopicDTO findById(String id) {
         log.info("Fetching topic with ID: {}", id);
         Topic topic = topicRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Topic", "id", id));
-        return modelMapper.map(topic, TopicCreateRequest.class);
+        return modelMapper.map(topic, TopicDTO.class);
     }
 
     @Override
     @Transactional
-    public TopicCreateRequest createTopic(TopicCreateRequest req) throws JsonProcessingException {
-        if(topicRepository.existsByTopicCode(req.getTopicCode())) {
-            throw new AppException(ErrorCode.TOPIC_CODE_EXISTS);
-        }
-
+    public TopicDTO createTopic(TopicCreateRequest req) throws JsonProcessingException {
         Department department = departmentRepository.findById(Integer.parseInt(req.getDepartment()))
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", req.getDepartment()));
         ResearchField researchField = researchFieldRepository.findById(Integer.parseInt(req.getField()))
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", req.getDepartment()));
         ResearchType researchType = researchTypeRepository.findById(Integer.parseInt(req.getResearchType()))
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", req.getDepartment()));
-//        Category category = req.getCategory() != null
-//                ? categoryRepository.findByCode(req.getCategory().getCode())
-//                .orElseThrow(() -> new IllegalArgumentException("Invalid category code: " + req.getCategory().getCode()))
-//                : null;
-//        return modelMapper.map(topic, TopicCreateRequest.class);
+        Category category = categoryRepository.findById(Integer.parseInt(req.getCategory()))
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategory()));
 
         String expectedProductsJson = objectMapper.writeValueAsString(req.getExpectedProducts());
         String budgetBreakdownJson = objectMapper.writeValueAsString(req.getBudgetBreakdown());
@@ -116,7 +167,7 @@ public class TopicServiceImpl implements TopicService {
         topic.setDepartment(department);
         topic.setResearchField(researchField);
         topic.setResearchType(researchType);
-//        topic.setCategory(category);
+        topic.setCategory(category);
         topic.setBudgetBreakdown(budgetBreakdownJson);
         topic.setExpectedProducts(expectedProductsJson);
         topic.setRemainingBudget(req.getTotalBudget());
@@ -124,7 +175,7 @@ public class TopicServiceImpl implements TopicService {
 
         List<Topic.AttachedDocument> attachedDocs = new ArrayList<>();
         if (req.getAttachedDocuments() != null) {
-            for (AttachedDocumentDTO docDTO : req.getAttachedDocuments()) {
+            for (AttachedDocumentCreation docDTO : req.getAttachedDocuments()) {
                 Topic.AttachedDocument doc = new Topic.AttachedDocument();
                 doc.setDescription(docDTO.getDescription());
 
@@ -157,7 +208,7 @@ public class TopicServiceImpl implements TopicService {
         topic = topicRepository.save(topic);
 
         log.info("Created new topic with ID: {}", topic.getId());
-        return modelMapper.map(topic, TopicCreateRequest.class);
+        return modelMapper.map(topic, TopicDTO.class);
     }
 
     @Override
@@ -181,5 +232,43 @@ public class TopicServiceImpl implements TopicService {
         topic.setStatus(status);
         topicRepository.save(topic);
         log.info("Changed status of topic with ID: {} to {}", id, status);
+    }
+
+    @Override
+    public boolean existsByTopicCode(String topicCode) {
+        return topicRepository.existsByTopicCode(topicCode);
+    }
+
+    @Override
+    public TopicStatisticsResponse getTopicStatistics() {
+        TopicStatisticsResponse response = new TopicStatisticsResponse();
+
+        // Summary metrics
+        response.setTotalTopics(topicRepository.count());
+        response.setInProgressCount(topicRepository.countInProgressTopics());
+        response.setCompletedCount(topicRepository.countCompletedTopics());
+        response.setTotalBudget(topicRepository.sumTotalBudget());
+
+        // Status distribution
+        List<TopicStatisticsResponse.StatusCount> statusCounts = topicRepository.countTopicsByStatus()
+                .stream()
+                .map(row -> new TopicStatisticsResponse.StatusCount(
+                        row[0].toString(),
+                        ((Number) row[1]).longValue()
+                ))
+                .collect(Collectors.toList());
+        response.setStatusDistribution(statusCounts);
+
+        // Department distribution
+        List<TopicStatisticsResponse.DepartmentCount> departmentCounts = topicRepository.countTopicsByDepartment()
+                .stream()
+                .map(row -> new TopicStatisticsResponse.DepartmentCount(
+                        (String) row[0],
+                        ((Number) row[1]).longValue()
+                ))
+                .collect(Collectors.toList());
+        response.setDepartmentDistribution(departmentCounts);
+
+        return response;
     }
 }
