@@ -33,7 +33,7 @@ public class TopicDTO {
 
     private String expectedProducts;
 
-    private String novelty;
+    private String urgency;
 
     private String expectedRisks;
 
@@ -64,10 +64,6 @@ public class TopicDTO {
 
     private String council;
 
-    private String registrationPeriod;
-
-    private boolean commitment;
-
     private String additionalNotes;
 
     private DepartmentDTO department;
@@ -78,5 +74,9 @@ public class TopicDTO {
 
     private CategoryDTO category;
 
+    private RegistrationPeriodDTO registrationPeriod;
+
     private List<AttachedDocumentDTO> attachedDocuments;
+
+    private List<TopicMemberDTO> members;
 }

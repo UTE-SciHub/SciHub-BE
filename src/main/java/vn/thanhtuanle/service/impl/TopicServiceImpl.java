@@ -13,16 +13,19 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
+import vn.thanhtuanle.common.enums.TopicMemberRole;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.common.service.CloudinaryService;
 import vn.thanhtuanle.entity.*;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.TopicDTO;
+import vn.thanhtuanle.model.dto.UserDTO;
 import vn.thanhtuanle.model.request.AttachedDocumentCreation;
 import vn.thanhtuanle.model.request.TopicCreateRequest;
 import vn.thanhtuanle.model.response.TopicStatisticsResponse;
 import vn.thanhtuanle.repository.*;
 import vn.thanhtuanle.service.TopicService;
+import vn.thanhtuanle.service.UserService;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -45,6 +48,10 @@ public class TopicServiceImpl implements TopicService {
     private final CategoryRepository categoryRepository;
     private final ObjectMapper objectMapper;
     private final CloudinaryService cloudinaryService;
+    private final UserService userService;
+    private final TopicMembersRepository topicMembersRepository;
+    private final UserRepository userRepository;
+    private final RegistrationPeriodRepository registrationPeriodRepository;
 
     @Value("${spring.servlet.multipart.max-file-size}")
     private DataSize MAX_FILE_SIZE;
@@ -157,6 +164,8 @@ public class TopicServiceImpl implements TopicService {
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", req.getDepartment()));
         Category category = categoryRepository.findById(Integer.parseInt(req.getCategory()))
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategory()));
+        RegistrationPeriod period = registrationPeriodRepository.findById(req.getRegistrationPeriod())
+                .orElseThrow(() -> new ResourceNotFoundException("Registration Period", "id", req.getRegistrationPeriod()));
 
         String expectedProductsJson = objectMapper.writeValueAsString(req.getExpectedProducts());
         String budgetBreakdownJson = objectMapper.writeValueAsString(req.getBudgetBreakdown());
@@ -168,6 +177,7 @@ public class TopicServiceImpl implements TopicService {
         topic.setResearchField(researchField);
         topic.setResearchType(researchType);
         topic.setCategory(category);
+        topic.setRegistrationPeriod(period);
         topic.setBudgetBreakdown(budgetBreakdownJson);
         topic.setExpectedProducts(expectedProductsJson);
         topic.setRemainingBudget(req.getTotalBudget());
@@ -207,7 +217,23 @@ public class TopicServiceImpl implements TopicService {
 
         topic = topicRepository.save(topic);
 
-        log.info("Created new topic with ID: {}", topic.getId());
+        UserDTO currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            throw new IllegalStateException("No logged-in user found");
+        }
+
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", currentUser.getId()));
+
+        TopicMember topicMember = TopicMember.builder()
+                .topic(topic)
+                .user(user)
+                .role(TopicMemberRole.MEMBER)
+                .build();
+
+        topicMembersRepository.save(topicMember);
+
+        log.info("Created new topic with ID: {}. Added current user as MEMBER.", topic.getId());
         return modelMapper.map(topic, TopicDTO.class);
     }
 
@@ -241,34 +267,80 @@ public class TopicServiceImpl implements TopicService {
 
     @Override
     public TopicStatisticsResponse getTopicStatistics() {
-        TopicStatisticsResponse response = new TopicStatisticsResponse();
+        return TopicStatisticsResponse.builder()
+                .totalTopics(topicRepository.count())
+                .inProgressCount(topicRepository.countInProgressTopics())
+                .completedCount(topicRepository.countCompletedTopics())
+                .totalBudget(topicRepository.sumTotalBudget())
+                .statusDistribution(topicRepository.countTopicsByStatus()
+                        .stream()
+                        .map(row -> TopicStatisticsResponse.StatusCount.builder()
+                                .status(row[0].toString())
+                                .count(((Number) row[1]).longValue())
+                                .build())
+                        .collect(Collectors.toList()))
+                .departmentDistribution(topicRepository.countTopicsByDepartment()
+                        .stream()
+                        .map(row -> TopicStatisticsResponse.DepartmentCount.builder()
+                                .departmentName((String) row[0])
+                                .count(((Number) row[1]).longValue())
+                                .build())
+                        .collect(Collectors.toList()))
+                .build();
+    }
 
-        // Summary metrics
-        response.setTotalTopics(topicRepository.count());
-        response.setInProgressCount(topicRepository.countInProgressTopics());
-        response.setCompletedCount(topicRepository.countCompletedTopics());
-        response.setTotalBudget(topicRepository.sumTotalBudget());
+    @Override
+    @Transactional
+    public void addMemberToTopic(String topicId, String userId, TopicMemberRole role) {
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        // Status distribution
-        List<TopicStatisticsResponse.StatusCount> statusCounts = topicRepository.countTopicsByStatus()
-                .stream()
-                .map(row -> new TopicStatisticsResponse.StatusCount(
-                        row[0].toString(),
-                        ((Number) row[1]).longValue()
-                ))
-                .collect(Collectors.toList());
-        response.setStatusDistribution(statusCounts);
+        if (topicMembersRepository.existsByTopicIdAndUserId(topicId, userId)) {
+            throw new IllegalStateException("User is already a member of this topic");
+        }
 
-        // Department distribution
-        List<TopicStatisticsResponse.DepartmentCount> departmentCounts = topicRepository.countTopicsByDepartment()
-                .stream()
-                .map(row -> new TopicStatisticsResponse.DepartmentCount(
-                        (String) row[0],
-                        ((Number) row[1]).longValue()
-                ))
-                .collect(Collectors.toList());
-        response.setDepartmentDistribution(departmentCounts);
+        TopicMember topicMember = TopicMember.builder()
+                .topic(topic)
+                .user(user)
+                .role(role)
+                .build();
 
-        return response;
+        topicMembersRepository.save(topicMember);
+    }
+
+    @Transactional
+    @Override
+    public void addMembersToTopic(String topicId, List<String> userIds, TopicMemberRole role) {
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+
+        List<TopicMember> newMembers = new ArrayList<>();
+
+        for (String userId : userIds) {
+            if (topicMembersRepository.existsByTopicIdAndUserId(topicId, userId)) {
+                continue;
+            }
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+            TopicMember topicMember = TopicMember.builder()
+                    .topic(topic)
+                    .user(user)
+                    .role(role)
+                    .build();
+
+            newMembers.add(topicMember);
+        }
+
+        topicMembersRepository.saveAll(newMembers);
+    }
+
+
+    @Override
+    public List<TopicMember> getMembersOfTopic(String topicId) {
+        return topicMembersRepository.findByTopicId(topicId);
     }
 }

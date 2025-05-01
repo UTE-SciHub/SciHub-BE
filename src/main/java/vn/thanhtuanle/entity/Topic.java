@@ -47,8 +47,8 @@ public class Topic extends BaseEntity {
     private String expectedProducts;
 
     @Lob
-    @Column(name = "novelty", columnDefinition = "TEXT")
-    private String novelty;
+    @Column(name = "urgency", columnDefinition = "TEXT")
+    private String urgency;
 
     @Lob
     @Column(name = "expected_risks", columnDefinition = "TEXT")
@@ -102,8 +102,9 @@ public class Topic extends BaseEntity {
     @Column(name = "council")
     private String council;
 
-    @Column(name = "registration_period")
-    private String registrationPeriod;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "registration_period_id", nullable = false)
+    private RegistrationPeriod registrationPeriod;
 
     @Column(name = "commitment")
     private boolean commitment;
@@ -127,6 +128,9 @@ public class Topic extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "research_type_id")
     private ResearchType researchType;
+
+    @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TopicMember> members = new ArrayList<>();
 
     @Embeddable
     @Setter

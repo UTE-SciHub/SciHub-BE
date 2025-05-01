@@ -4,17 +4,13 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class CloudinaryService {
@@ -30,7 +26,7 @@ public class CloudinaryService {
     private String apiSecret;
 
     private static final String[] ALLOWED_IMAGE_TYPES = {"jpg", "jpeg", "png", "gif"};
-    private static final String PDF_TYPE = "pdf";
+    private static final String[] FILE_TYPES = {"pdf", "docx", "doc", "pptx", "ppt", "xlsx", "xls"};
     private static final String BASE_FOLDER = "UTE-SciHub";
     private static final String IMAGE_FOLDER = BASE_FOLDER + "/images";
     private static final String PDF_FOLDER = BASE_FOLDER + "/pdf";
@@ -60,8 +56,7 @@ public class CloudinaryService {
             uploadParams.put("resource_type", isImage(fileExtension) ? "image" : "raw");
             uploadParams.put("folder", isImage(fileExtension) ? IMAGE_FOLDER : PDF_FOLDER);
 
-            Map result = cloudinary.uploader().upload(tempFile, uploadParams);
-            return result;
+            return cloudinary.uploader().upload(tempFile, uploadParams);
         } finally {
             try {
                 Files.deleteIfExists(tempFile.toPath());
@@ -96,12 +91,21 @@ public class CloudinaryService {
     }
 
     private boolean isSupportedFileType(String extension) {
-        return isImage(extension) || PDF_TYPE.equals(extension);
+        return isImage(extension) || isDocument(extension);
     }
 
     private boolean isImage(String extension) {
         for (String imageType : ALLOWED_IMAGE_TYPES) {
-            if (imageType.equals(extension)) {
+            if (imageType.equalsIgnoreCase(extension)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isDocument(String extension) {
+        for (String docType : FILE_TYPES) {
+            if (docType.equalsIgnoreCase(extension)) {
                 return true;
             }
         }

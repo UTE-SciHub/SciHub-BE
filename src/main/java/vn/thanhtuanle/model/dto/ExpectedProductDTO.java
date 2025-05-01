@@ -8,8 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class ExpectedProductDTO {
-    private String id;
-    private String productName;
-    private String criteria;
-    private String description;
+    private ScientificProductDTO scientific;
+    private TrainingProductDTO training;
+    private CommercialProductDTO commercial;
 }

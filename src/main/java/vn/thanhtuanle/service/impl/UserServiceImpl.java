@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.unit.DataSize;
@@ -25,7 +26,6 @@ import vn.thanhtuanle.common.enums.ErrorType;
 import vn.thanhtuanle.common.enums.RoleType;
 import vn.thanhtuanle.common.enums.UserStatus;
 import vn.thanhtuanle.common.mapper.ExcelExporterFactory;
-import vn.thanhtuanle.common.mapper.UserExcelRowMapper;
 import vn.thanhtuanle.common.service.*;
 import vn.thanhtuanle.entity.Role;
 import vn.thanhtuanle.entity.User;
@@ -134,6 +134,15 @@ public class UserServiceImpl implements UserService {
                     log.warn("User not found with email: {}", email);
                     return new AppException(ErrorCode.USER_NOT_FOUND);
                 });
+
+        return modelMapper.map(user, UserDTO.class);
+    }
+
+    @Override
+    public UserDTO getCurrentUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         return modelMapper.map(user, UserDTO.class);
     }

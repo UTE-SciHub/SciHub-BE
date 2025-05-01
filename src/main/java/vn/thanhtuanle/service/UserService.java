@@ -20,6 +20,8 @@ public interface UserService {
 
     UserDTO getCurrentUser(String token);
 
+    UserDTO getCurrentUser();
+
     @Transactional
     Map<String, Object> multipleCreate(MultipleCreateUserRequest req);
 

@@ -85,8 +85,8 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     }
 
     @Override
-    public Page<RegistrationPeriodDTO> getAll(Pageable pageable, String query, RegistrationPeriodsStatus status, LocalDate startDate, LocalDate endDate) {
-        Specification<RegistrationPeriod> spec = createSpecification(query, status, startDate, endDate);
+    public Page<RegistrationPeriodDTO> getAll(Pageable pageable, String query, RegistrationPeriodsStatus status, LocalDate startDate, LocalDate endDate, Integer year) {
+        Specification<RegistrationPeriod> spec = createSpecification(query, status, startDate, endDate, year);
 
         Page<RegistrationPeriod> registrationPeriods = registrationPeriodRepository.findAll(spec, pageable);
         return registrationPeriods.map(period -> modelMapper.map(period, RegistrationPeriodDTO.class));
@@ -254,9 +254,9 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
     }
 
     @Override
-    public byte[] exportExcel(String query, RegistrationPeriodsStatus status, String sort, String order, LocalDate startDate, LocalDate endDate) {
+    public byte[] exportExcel(String query, RegistrationPeriodsStatus status, String sort, String order, LocalDate startDate, LocalDate endDate, Integer year) {
         try {
-            Specification<RegistrationPeriod> spec = createSpecification(query, status, startDate, endDate);
+            Specification<RegistrationPeriod> spec = createSpecification(query, status, startDate, endDate, year);
             Sort.Direction direction = "desc".equalsIgnoreCase(order) ? Sort.Direction.DESC : Sort.Direction.ASC;
             Sort sorting = Sort.by(direction, sort);
 
@@ -283,12 +283,21 @@ public class RegistrationPeriodServiceImpl implements RegistrationPeriodService 
         return modelMapper.map(registrationPeriod, RegistrationPeriodDTO.class);
     }
 
-    private Specification<RegistrationPeriod> createSpecification(String query, RegistrationPeriodsStatus status, LocalDate startDate, LocalDate endDate) {
+    private Specification<RegistrationPeriod> createSpecification(String query, RegistrationPeriodsStatus status, LocalDate startDate, LocalDate endDate, Integer year) {
         Specification<RegistrationPeriod> spec = Specification.where(null);
 
         if (status != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("status"), status));
+        }
+
+        if (year != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) -> {
+                return criteriaBuilder.or(
+                        criteriaBuilder.equal(criteriaBuilder.function("YEAR", Integer.class, root.get("startDate")), year),
+                        criteriaBuilder.equal(criteriaBuilder.function("YEAR", Integer.class, root.get("endDate")), year)
+                );
+            });
         }
 
         if (startDate != null) {

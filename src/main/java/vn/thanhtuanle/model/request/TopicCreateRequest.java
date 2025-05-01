@@ -35,10 +35,10 @@ public class TopicCreateRequest {
 
     private String practicalApplications;
 
-    @NotEmpty(message = "Expected products cannot be empty")
-    private List<ExpectedProductDTO> expectedProducts = new ArrayList<>();
+    @NotNull(message = "Expected products cannot be null")
+    private ExpectedProductDTO expectedProducts;
 
-    private String novelty;
+    private String urgency;
 
     private String expectedRisks;
 
@@ -59,8 +59,6 @@ public class TopicCreateRequest {
     private long totalBudget;
 
     private String fundingSource;
-
-    private long approvedBudget;
 
     private long remainingBudget;
 

@@ -15,7 +15,9 @@ public interface TopicRepository extends JpaRepository<Topic, String>, JpaSpecif
     List<Object[]> countTopicsByStatus();
 
     // Count topics by department
-    @Query("SELECT d.name AS departmentName, COUNT(t) AS count FROM Topic t JOIN t.department d GROUP BY d.name")
+    @Query("SELECT d.name AS departmentName, COUNT(t) AS count " +
+            "FROM Department d LEFT JOIN Topic t ON t.department = d " +
+            "GROUP BY d.name")
     List<Object[]> countTopicsByDepartment();
 
     // Total topics
