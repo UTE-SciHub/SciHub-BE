@@ -13,13 +13,14 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
+import vn.thanhtuanle.common.enums.RegistrationPeriodsStatus;
 import vn.thanhtuanle.common.enums.TopicMemberRole;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.common.service.CloudinaryService;
 import vn.thanhtuanle.entity.*;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
-import vn.thanhtuanle.model.dto.TopicDTO;
-import vn.thanhtuanle.model.dto.UserDTO;
+import vn.thanhtuanle.model.dto.*;
+import vn.thanhtuanle.model.request.AssignToDepartmentRequest;
 import vn.thanhtuanle.model.request.AttachedDocumentCreation;
 import vn.thanhtuanle.model.request.TopicCreateRequest;
 import vn.thanhtuanle.model.response.TopicStatisticsResponse;
@@ -29,10 +30,7 @@ import vn.thanhtuanle.service.UserService;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -156,16 +154,12 @@ public class TopicServiceImpl implements TopicService {
     @Override
     @Transactional
     public TopicDTO createTopic(TopicCreateRequest req) throws JsonProcessingException {
-        Department department = departmentRepository.findById(Integer.parseInt(req.getDepartment()))
-                .orElseThrow(() -> new ResourceNotFoundException("Department", "id", req.getDepartment()));
         ResearchField researchField = researchFieldRepository.findById(Integer.parseInt(req.getField()))
-                .orElseThrow(() -> new ResourceNotFoundException("Department", "id", req.getDepartment()));
+                .orElseThrow(() -> new ResourceNotFoundException("ResearchField", "id", req.getField()));
         ResearchType researchType = researchTypeRepository.findById(Integer.parseInt(req.getResearchType()))
-                .orElseThrow(() -> new ResourceNotFoundException("Department", "id", req.getDepartment()));
+                .orElseThrow(() -> new ResourceNotFoundException("ResearchType", "id", req.getResearchType()));
         Category category = categoryRepository.findById(Integer.parseInt(req.getCategory()))
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", req.getCategory()));
-        RegistrationPeriod period = registrationPeriodRepository.findById(req.getRegistrationPeriod())
-                .orElseThrow(() -> new ResourceNotFoundException("Registration Period", "id", req.getRegistrationPeriod()));
 
         String expectedProductsJson = objectMapper.writeValueAsString(req.getExpectedProducts());
         String budgetBreakdownJson = objectMapper.writeValueAsString(req.getBudgetBreakdown());
@@ -173,19 +167,22 @@ public class TopicServiceImpl implements TopicService {
         Topic topic = modelMapper.map(req, Topic.class);
 
         topic.setId(UUID.randomUUID().toString());
-        topic.setDepartment(department);
         topic.setResearchField(researchField);
         topic.setResearchType(researchType);
         topic.setCategory(category);
-        topic.setRegistrationPeriod(period);
         topic.setBudgetBreakdown(budgetBreakdownJson);
         topic.setExpectedProducts(expectedProductsJson);
         topic.setRemainingBudget(req.getTotalBudget());
-        topic.setStatus(TopicStatus.SUBMITTED);
+        topic.setStatus(TopicStatus.DRAFT);
 
         List<Topic.AttachedDocument> attachedDocs = new ArrayList<>();
         if (req.getAttachedDocuments() != null) {
             for (AttachedDocumentCreation docDTO : req.getAttachedDocuments()) {
+                if (docDTO.getId() != null) {
+                    log.warn("Unexpected id provided for new attached document: {}", docDTO.getId());
+                    continue;
+                }
+
                 Topic.AttachedDocument doc = new Topic.AttachedDocument();
                 doc.setDescription(docDTO.getDescription());
 
@@ -203,11 +200,13 @@ public class TopicServiceImpl implements TopicService {
 
                         doc.setFilePath(fileUrl);
                         doc.setPublicId(publicId);
+                        doc.setOriginalFileName(file.getOriginalFilename());
                     } catch (IOException e) {
+                        log.error("Failed to upload PDF file for document: {}", docDTO.getDescription(), e);
                         throw new RuntimeException("Failed to upload PDF file", e);
                     }
                 } else {
-                    throw new IllegalArgumentException("File is required for attached documents");
+                    throw new IllegalArgumentException("File is required for new attached documents");
                 }
 
                 attachedDocs.add(doc);
@@ -239,15 +238,153 @@ public class TopicServiceImpl implements TopicService {
 
     @Override
     @Transactional
-    public TopicCreateRequest updateTopic(String id, TopicCreateRequest topicDTO) {
+    public TopicDTO updateTopic(String id, TopicCreateRequest topicDTO) throws JsonProcessingException {
         log.info("Updating topic with ID: {}", id);
-        Topic topic = topicRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Topic", "id", id));
+
+        Topic topic = topicRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", id));
+
+        if (topicDTO.getField() != null) {
+            ResearchField researchField = researchFieldRepository.findById(Integer.parseInt(topicDTO.getField()))
+                    .orElseThrow(() -> new ResourceNotFoundException("ResearchField", "id", topicDTO.getField()));
+            topic.setResearchField(researchField);
+        }
+
+        if (topicDTO.getResearchType() != null) {
+            ResearchType researchType = researchTypeRepository.findById(Integer.parseInt(topicDTO.getResearchType()))
+                    .orElseThrow(() -> new ResourceNotFoundException("ResearchType", "id", topicDTO.getResearchType()));
+            topic.setResearchType(researchType);
+        }
+
+        if (topicDTO.getCategory() != null) {
+            Category category = categoryRepository.findById(Integer.parseInt(topicDTO.getCategory()))
+                    .orElseThrow(() -> new ResourceNotFoundException("Category", "id", topicDTO.getCategory()));
+            topic.setCategory(category);
+        }
+
+        if (topicDTO.getExpectedProducts() != null) {
+            String expectedProductsJson = objectMapper.writeValueAsString(topicDTO.getExpectedProducts());
+            topic.setExpectedProducts(expectedProductsJson);
+        }
+
+        if (topicDTO.getBudgetBreakdown() != null) {
+            String budgetBreakdownJson = objectMapper.writeValueAsString(topicDTO.getBudgetBreakdown());
+            topic.setBudgetBreakdown(budgetBreakdownJson);
+        }
 
         modelMapper.map(topicDTO, topic);
+
+        if (topicDTO.getBudgetBreakdown() != null) {
+            List<BudgetBreakdownDTO> sanitizedBudgetBreakdown = topicDTO.getBudgetBreakdown().stream()
+                    .map(dto -> {
+                        BudgetBreakdownDTO sanitized = new BudgetBreakdownDTO();
+                        sanitized.setCategory(dto.getCategory() != null ? dto.getCategory().replaceAll("[\\p{Cntrl}]", "") : null);
+                        sanitized.setAmount(dto.getAmount());
+                        sanitized.setDescription(dto.getDescription() != null ? dto.getDescription().replaceAll("[\\p{Cntrl}]", "") : null);
+                        return sanitized;
+                    })
+                    .collect(Collectors.toList());
+
+            String budgetBreakdownJson = objectMapper.writeValueAsString(sanitizedBudgetBreakdown);
+            log.info("Budget breakdown after serialization: {}", budgetBreakdownJson);
+            topic.setBudgetBreakdown(budgetBreakdownJson);
+        }
+
+        if (topicDTO.getExpectedProducts() != null) {
+            ExpectedProductDTO sanitizedExpectedProducts = getExpectedProductDTO(topicDTO);
+
+            String expectedProductsJson = objectMapper.writeValueAsString(sanitizedExpectedProducts);
+            log.info("Expected products after serialization: {}", expectedProductsJson);
+            topic.setExpectedProducts(expectedProductsJson);
+        }
+
+        if (topicDTO.getTotalBudget() != 0) {
+            topic.setRemainingBudget(topicDTO.getTotalBudget());
+        }
+
+        if (topicDTO.getAttachedDocuments() != null) {
+            List<Topic.AttachedDocument> existingDocs = topic.getAttachedDocuments() != null ? topic.getAttachedDocuments() : new ArrayList<>();
+            List<Topic.AttachedDocument> updatedDocs = new ArrayList<>();
+
+            for (AttachedDocumentCreation docDTO : topicDTO.getAttachedDocuments()) {
+                Topic.AttachedDocument doc;
+
+                if (docDTO.getId() != null) {
+                    doc = existingDocs.stream()
+                            .filter(d -> d.getPublicId() != null && d.getPublicId().equals(docDTO.getId()))
+                            .findFirst()
+                            .orElse(null);
+                    if (doc != null) {
+                        // Update description if provided
+                        doc.setDescription(docDTO.getDescription());
+                        updatedDocs.add(doc);
+                        continue;
+                    }
+                }
+
+                doc = new Topic.AttachedDocument();
+                doc.setDescription(docDTO.getDescription());
+
+                MultipartFile file = docDTO.getFile();
+                if (file != null && !file.isEmpty()) {
+                    if (file.getSize() > MAX_FILE_SIZE.toBytes()) {
+                        throw new IllegalArgumentException("File size exceeds the maximum limit of " + MAX_FILE_SIZE);
+                    }
+                    String fileUrl = "";
+                    String publicId = "";
+                    try {
+                        Map result = cloudinaryService.upload(file);
+                        fileUrl = String.valueOf(result.get("url"));
+                        publicId = String.valueOf(result.get("public_id"));
+
+                        doc.setFilePath(fileUrl);
+                        doc.setPublicId(publicId);
+                        doc.setOriginalFileName(file.getOriginalFilename());
+                    } catch (IOException e) {
+                        log.error("Failed to upload PDF file for document: {}", docDTO.getDescription(), e);
+                        throw new RuntimeException("Failed to upload PDF file", e);
+                    }
+                } else if (docDTO.getId() == null) {
+                    throw new IllegalArgumentException("File is required for new attached documents");
+                }
+
+                updatedDocs.add(doc);
+            }
+
+            topic.setAttachedDocuments(updatedDocs);
+        }
+
         topic = topicRepository.save(topic);
 
         log.info("Updated topic with ID: {}", topic.getId());
-        return modelMapper.map(topic, TopicCreateRequest.class);
+        return modelMapper.map(topic, TopicDTO.class);
+    }
+
+    private static ExpectedProductDTO getExpectedProductDTO(TopicCreateRequest topicDTO) {
+        ExpectedProductDTO sanitizedExpectedProducts = new ExpectedProductDTO();
+
+        // Sanitize scientific
+        ScientificProductDTO sanitizedScientific = new ScientificProductDTO(
+                topicDTO.getExpectedProducts().getScientific() != null ? topicDTO.getExpectedProducts().getScientific().getDomestic() : 0,
+                topicDTO.getExpectedProducts().getScientific() != null ? topicDTO.getExpectedProducts().getScientific().getInternational() : 0
+        );
+        sanitizedExpectedProducts.setScientific(sanitizedScientific);
+
+        // Sanitize training
+        TrainingProductDTO sanitizedTraining = new TrainingProductDTO(
+                topicDTO.getExpectedProducts().getTraining() != null ? topicDTO.getExpectedProducts().getTraining().getMasters() : 0,
+                topicDTO.getExpectedProducts().getTraining() != null ? topicDTO.getExpectedProducts().getTraining().getStudents() : 0
+        );
+        sanitizedExpectedProducts.setTraining(sanitizedTraining);
+
+        // Sanitize commercial
+        String sanitizedDetails = topicDTO.getExpectedProducts().getCommercial() != null &&
+                topicDTO.getExpectedProducts().getCommercial().getDetails() != null
+                ? topicDTO.getExpectedProducts().getCommercial().getDetails().replaceAll("[\\p{Cntrl}]", "")
+                : "";
+        CommercialProductDTO sanitizedCommercial = new CommercialProductDTO(sanitizedDetails);
+        sanitizedExpectedProducts.setCommercial(sanitizedCommercial);
+        return sanitizedExpectedProducts;
     }
 
     @Override
@@ -338,9 +475,170 @@ public class TopicServiceImpl implements TopicService {
         topicMembersRepository.saveAll(newMembers);
     }
 
-
     @Override
     public List<TopicMember> getMembersOfTopic(String topicId) {
         return topicMembersRepository.findByTopicId(topicId);
+    }
+
+    @Override
+    public List<TopicDTO> getUserTopics() {
+        UserDTO currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            throw new IllegalStateException("No logged-in user found");
+        }
+
+        List<Topic> topics = topicRepository.findByUserId(currentUser.getId());
+        return topics.stream()
+                .map(topic -> modelMapper.map(topic, TopicDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public TopicDTO submitTopic(String topicId, String registrationPeriodId) {
+        Topic topic = topicRepository.findById(topicId).orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+
+        if (topic.getStatus() != TopicStatus.DRAFT) {
+            throw new IllegalStateException("Only topics in DRAFT status can be submitted.");
+        }
+
+        RegistrationPeriod period = registrationPeriodRepository.findById(registrationPeriodId).orElseThrow(() -> new ResourceNotFoundException("RegistraionPeriod", "id", registrationPeriodId));
+
+        if (period.getStatus() != RegistrationPeriodsStatus.OPEN) {
+            throw new IllegalStateException("The registration period is not open.");
+        }
+
+        LocalDate currentDate = LocalDate.now();
+        if (currentDate.isBefore(period.getStartDate()) ||
+                currentDate.isAfter(period.getEndDate())) {
+            throw new IllegalStateException("The registration period is not currently active.");
+        }
+
+        topic.setStatus(TopicStatus.SUBMITTED);
+        topic.setRegistrationPeriod(period);
+
+        Topic savedTopic = topicRepository.save(topic);
+        return modelMapper.map(savedTopic, TopicDTO.class);
+    }
+
+    @Override
+    public void deleteTopicById(String topicId) {
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+
+        List<Topic.AttachedDocument> documents = topic.getAttachedDocuments();
+        if (documents != null) {
+            for (Topic.AttachedDocument doc : documents) {
+                String publicId = doc.getPublicId();
+                if (publicId != null && !publicId.isBlank()) {
+                    try {
+                        cloudinaryService.delete(publicId, "raw");
+                        log.info("Deleted file from Cloudinary with publicId: {}", publicId);
+                    } catch (Exception e) {
+                        log.warn("Failed to delete file from Cloudinary with publicId: {}", publicId, e);
+                    }
+                }
+            }
+        }
+
+        topicRepository.delete(topic);
+        log.info("Deleted topic with ID: {}", topicId);
+    }
+
+    @Transactional
+    @Override
+    public TopicDTO assignToDepartment(String topicId, AssignToDepartmentRequest request) {
+        log.info("Assigning topic with ID: {} to department with ID: {}", topicId, request.getDepartmentId());
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+
+        log.info("Fetching department with ID: {}", request.getDepartmentId());
+        Department department = departmentRepository.findById(Integer.parseInt(request.getDepartmentId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Department", "id", request.getDepartmentId()));
+
+        topic.setStatus(TopicStatus.ASSIGNED);
+        topic.setDepartment(department);
+        topic.setAdditionalNotes(request.getNotes());
+
+        Topic savedTopic = topicRepository.save(topic);
+        log.info("Assigned topic with ID: {} to department with ID: {}", topicId, request.getDepartmentId());
+
+        return modelMapper.map(savedTopic, TopicDTO.class);
+    }
+
+    @Override
+    public Page<TopicDTO> getTopicsByDepartment(String departmentEmail, String query, Pageable pageable) {
+        log.info("Fetching topics for department with ID: {}", departmentEmail);
+        Department department = departmentRepository.findByEmail(departmentEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Department", "email", departmentEmail));
+
+        Specification<Topic> spec = Specification.where((root, criteriaQuery, criteriaBuilder) ->
+                criteriaBuilder.equal(root.get("department"), department));
+
+        if (query != null && !query.trim().isEmpty()) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) -> {
+                String searchPattern = "%" + query.toLowerCase() + "%";
+                return criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("vietnameseName")), searchPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("englishName")), searchPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("topicCode")), searchPattern)
+                );
+            });
+        }
+
+        Page<Topic> topics = topicRepository.findAll(spec, pageable);
+        log.info("Found {} topics for department with ID: {}", topics.getTotalElements(), departmentEmail);
+        return topics.map(t -> modelMapper.map(t, TopicDTO.class));
+    }
+
+    @Transactional
+    @Override
+    public void approveTopic(String topicId, String notes) {
+        log.info("Approving topic with ID: {}", topicId);
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+
+        if (topic.getStatus() != TopicStatus.ASSIGNED) {
+            throw new IllegalStateException("Chỉ những đề tài được phân công mới có thể chấp nhận.");
+        }
+
+        topic.setStatus(TopicStatus.APPROVED);
+        topic.setAdditionalNotes(notes);
+        topicRepository.save(topic);
+        log.info("Approved topic with ID: {}", topicId);
+    }
+
+    @Transactional
+    @Override
+    public void rejectTopic(String topicId, String notes) {
+        log.info("Rejecting topic with ID: {}", topicId);
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+
+        if (topic.getStatus() != TopicStatus.ASSIGNED) {
+            throw new IllegalStateException("Chỉ những đề tài được phân công mới có thể từ chối.");
+        }
+
+        topic.setStatus(TopicStatus.REJECTED);
+        topic.setRejectionReason(notes);
+        topicRepository.save(topic);
+        log.info("Rejected topic with ID: {}", topicId);
+    }
+
+    @Transactional
+    @Override
+    public void reviewTopic(String topicId, TopicStatus status, String notes) {
+        log.info("Reviewing topic with ID: {}", topicId);
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+
+        if (topic.getStatus() != TopicStatus.SUBMITTED) {
+            throw new IllegalStateException("Only submitted topics can be reviewed.");
+        }
+
+        topic.setStatus(status);
+        topic.setAdditionalNotes(notes);
+        topicRepository.save(topic);
+        log.info("Reviewed topic with ID: {}. New status: {}", topicId, status);
     }
 }

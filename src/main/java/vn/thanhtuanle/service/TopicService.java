@@ -8,6 +8,7 @@ import vn.thanhtuanle.common.enums.TopicMemberRole;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.entity.TopicMember;
 import vn.thanhtuanle.model.dto.TopicDTO;
+import vn.thanhtuanle.model.request.AssignToDepartmentRequest;
 import vn.thanhtuanle.model.request.TopicCreateRequest;
 import vn.thanhtuanle.model.response.TopicStatisticsResponse;
 
@@ -20,7 +21,7 @@ public interface TopicService {
 
     TopicDTO createTopic(TopicCreateRequest topicDTO) throws JsonProcessingException;
 
-    TopicCreateRequest updateTopic(String id, TopicCreateRequest topicDTO);
+    TopicDTO updateTopic(String id, TopicCreateRequest topicDTO) throws JsonProcessingException;
 
     void changeStatus(String id, TopicStatus status);
 
@@ -47,4 +48,24 @@ public interface TopicService {
     void addMembersToTopic(String topicId, List<String> userIds, TopicMemberRole role);
 
     List<TopicMember> getMembersOfTopic(String topicId);
+
+    List<TopicDTO> getUserTopics();
+
+    TopicDTO submitTopic(String topicId, String registrationPeriodId);
+
+    void deleteTopicById(String topicId);
+
+    @Transactional
+    TopicDTO assignToDepartment(String topicId, AssignToDepartmentRequest request);
+
+    Page<TopicDTO> getTopicsByDepartment(String departmentEmail, String query, Pageable pageable);
+
+    @Transactional
+    void approveTopic(String topicId, String notes);
+
+    @Transactional
+    void rejectTopic(String topicId, String notes);
+
+    @Transactional
+    void reviewTopic(String topicId, TopicStatus status, String notes);
 }

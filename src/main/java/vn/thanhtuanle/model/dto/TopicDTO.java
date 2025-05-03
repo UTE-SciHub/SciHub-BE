@@ -14,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TopicDTO {
+public class TopicDTO extends BaseDTO {
 
     private String id;
 
@@ -79,4 +79,6 @@ public class TopicDTO {
     private List<AttachedDocumentDTO> attachedDocuments;
 
     private List<TopicMemberDTO> members;
+
+    private String rejectionReason;
 }

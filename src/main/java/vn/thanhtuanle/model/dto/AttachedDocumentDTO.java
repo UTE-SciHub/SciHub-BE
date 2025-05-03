@@ -11,4 +11,5 @@ public class AttachedDocumentDTO {
     private String filePath;
     private String description;
     private String publicId;
+    private String originalFileName;
 }

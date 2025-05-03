@@ -4,25 +4,37 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import vn.thanhtuanle.common.enums.Constant;
+import vn.thanhtuanle.common.enums.RoleType;
+import vn.thanhtuanle.common.enums.UserStatus;
 import vn.thanhtuanle.common.mapper.ExcelExporterFactory;
 import vn.thanhtuanle.common.service.CloudinaryService;
 import vn.thanhtuanle.common.service.ExcelExporter;
 import vn.thanhtuanle.common.service.ExcelRowMapper;
+import vn.thanhtuanle.entity.Role;
+import vn.thanhtuanle.entity.User;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.DepartmentDTO;
+import vn.thanhtuanle.model.dto.UserDTO;
+import vn.thanhtuanle.model.request.UserRequest;
+import vn.thanhtuanle.repository.RoleRepository;
+import vn.thanhtuanle.repository.UserRepository;
 import vn.thanhtuanle.service.DepartmentService;
 import vn.thanhtuanle.model.request.DepartmentRequest;
 import vn.thanhtuanle.entity.Department;
 import vn.thanhtuanle.repository.DepartmentRepository;
+import vn.thanhtuanle.service.UserService;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.imageio.ImageIO;
 
 @Service
@@ -36,6 +48,9 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Qualifier("departmentExcelRowMapper")
     private final ExcelRowMapper<Department> departmentExcelRowMapper;
 
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+
     private final List<String> EXCEL_HEADERS = List.of(
             "ID",
             "Tên phòng ban",
@@ -43,6 +58,9 @@ public class DepartmentServiceImpl implements DepartmentService {
             "Email",
             "Trạng thái"
     );
+
+    @Value("${application.user.password.default}")
+    private String USER_PASSWORD_DEFAULT;
 
     @Override
     public Page<DepartmentDTO> findAll(Pageable pageable, String query, Boolean delFlag) {
@@ -92,7 +110,23 @@ public class DepartmentServiceImpl implements DepartmentService {
                 .delFlag(false)
                 .build();
 
-        return modelMapper.map(departmentRepository.save(department), DepartmentDTO.class);
+        Department savedDepartment = departmentRepository.save(department);
+
+        Role role = roleRepository.findByName(RoleType.BCNKHOA)
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "type", RoleType.BCNKHOA.name()));
+        User user = User.builder()
+                .email(departmentRequest.getEmail())
+                .name(departmentRequest.getName())
+                .phoneNumber(departmentRequest.getPhoneNumber())
+                .roles(Set.of(role))
+                .password(USER_PASSWORD_DEFAULT)
+                .imageUrl(imageUrl)
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        userRepository.save(user);
+
+        return modelMapper.map(savedDepartment, DepartmentDTO.class);
     }
 
     @Override
@@ -107,6 +141,8 @@ public class DepartmentServiceImpl implements DepartmentService {
     public DepartmentDTO updateDepartment(Integer id, DepartmentDTO departmentRequest, MultipartFile logoFile) throws IOException {
         Department department = departmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Department", "id", id));
+        User user = userRepository.findByEmail(departmentRequest.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", departmentRequest.getEmail()));
 
         String oldImageUrl = department.getImageUrl();
         String oldPublicId = department.getLogoPublicId();
@@ -142,9 +178,11 @@ public class DepartmentServiceImpl implements DepartmentService {
         if (imageUrl != null && newPublicId != null) {
             department.setImageUrl(imageUrl);
             department.setLogoPublicId(newPublicId);
+            user.setImageUrl(imageUrl);
         } else {
             department.setImageUrl(oldImageUrl);
             department.setLogoPublicId(oldPublicId);
+            user.setImageUrl(oldImageUrl);
         }
 
         if (departmentRequest.getDelFlag() != null) {
@@ -155,6 +193,15 @@ public class DepartmentServiceImpl implements DepartmentService {
 
         departmentRepository.saveAndFlush(department);
 
+        user.setEmail(departmentRequest.getEmail());
+        user.setName(departmentRequest.getName());
+        user.setPhoneNumber(departmentRequest.getPhoneNumber());
+
+        if(departmentRequest.getDelFlag()) {
+            user.setStatus(UserStatus.BLOCKED);
+        }
+
+        userRepository.save(user);
         return modelMapper.map(department, DepartmentDTO.class);
     }
 
@@ -162,8 +209,12 @@ public class DepartmentServiceImpl implements DepartmentService {
     public void deleteDepartment(Integer id) {
         Department department = departmentRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Department", "id", id));
         department.setDelFlag(true);
-
         departmentRepository.save(department);
+
+        User user = userRepository.findByEmail(department.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", department.getEmail()));
+        user.setStatus(UserStatus.BLOCKED);
+        userRepository.save(user);
     }
 
     @Override

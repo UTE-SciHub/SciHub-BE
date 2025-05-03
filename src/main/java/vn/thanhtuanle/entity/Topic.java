@@ -132,6 +132,9 @@ public class Topic extends BaseEntity {
     @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TopicMember> members = new ArrayList<>();
 
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
     @Embeddable
     @Setter
     @Getter
@@ -146,5 +149,8 @@ public class Topic extends BaseEntity {
 
         @Column(name = "public_id")
         private String publicId;
+
+        @Column(name = "original_file_name")
+        private String originalFileName;
     }
 }

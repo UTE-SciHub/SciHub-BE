@@ -36,4 +36,6 @@ public interface UserService {
     void resetPassword(String id);
 
     UserDTO changeStatus(String id, UserStatus status);
+
+    UserDTO getUserByEmail(String email);
 }

@@ -4,12 +4,10 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 import vn.thanhtuanle.common.enums.Gender;
+import vn.thanhtuanle.common.enums.RoleType;
 
 import java.time.LocalDate;
 
@@ -17,6 +15,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class UserRequest {
 
     @NotEmpty(message = "Email không được để trống")
@@ -29,9 +28,10 @@ public class UserRequest {
     @NotEmpty(message = "Số điện thoại không được để trống")
     private String phoneNumber;
 
-    @NotNull(message = "Giới tính không được để trống")
     private Gender gender;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate dob;
+
+    private RoleType role;
 }

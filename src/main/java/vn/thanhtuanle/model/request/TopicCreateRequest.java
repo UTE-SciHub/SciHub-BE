@@ -73,8 +73,6 @@ public class TopicCreateRequest {
 
     private String additionalNotes;
 
-    private String department;
-
     private String field;
 
     private String researchType;

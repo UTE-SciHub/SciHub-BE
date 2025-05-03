@@ -35,7 +35,7 @@ public enum ErrorCode {
 //    Topic
     TOPIC_NOT_FOUND(1404, "Không tìm thấy đề tài", HttpStatus.NOT_FOUND),
     TOPIC_CODE_EXISTS(1405, "Mã đề tài đã tồn tại", HttpStatus.BAD_REQUEST),
-
+    TOPIC_NOT_SUBMITTED(1406, "Đề tài chưa được gửi", HttpStatus.BAD_REQUEST),
     ;
 
     Integer code;

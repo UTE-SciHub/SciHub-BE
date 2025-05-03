@@ -107,4 +107,16 @@ public class GlobalExceptionHandler {
                 .build();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<BaseResponse<?>> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
+        BaseResponse<?> response = BaseResponse.builder()
+                .code(ErrorCode.INTERNAL_SERVER_ERROR.getCode())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message(ex.getMessage())
+                .timestamp(new Date())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

@@ -88,10 +88,10 @@ public class UserServiceImpl implements UserService {
 
         String id = req.getEmail().split("@")[0];
 
-        Role role = roleRepository.findByName(RoleType.STUDENT)
+        Role role = roleRepository.findByName(req.getRole())
                 .orElseThrow(() -> {
-                    log.warn("Role not found with name: {}", RoleType.STUDENT);
-                    return new ResourceNotFoundException("Role", "name", RoleType.STUDENT.name());
+                    log.warn("Role not found with name: {}", req.getRole());
+                    return new ResourceNotFoundException("Role", "name", req.getRole().name());
                 });
 
         String avatarUrl = null;
@@ -297,6 +297,14 @@ public class UserServiceImpl implements UserService {
             }
         }
         return users;
+    }
+
+    @Override
+    public UserDTO getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+
+        return modelMapper.map(user, UserDTO.class);
     }
 
     private String getCellValue(Cell cell) {
