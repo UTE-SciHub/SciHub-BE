@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.UserStatus;
+import vn.thanhtuanle.entity.User;
 import vn.thanhtuanle.model.dto.ImportUserDTO;
 import vn.thanhtuanle.model.request.UserRequest;
 import vn.thanhtuanle.model.request.MultipleCreateUserRequest;
@@ -38,4 +39,8 @@ public interface UserService {
     UserDTO changeStatus(String id, UserStatus status);
 
     UserDTO getUserByEmail(String email);
+
+    User getCurrentUserEntity();
+
+    User getUserById(String id);
 }

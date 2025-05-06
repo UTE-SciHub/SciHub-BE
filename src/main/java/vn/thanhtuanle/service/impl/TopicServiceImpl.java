@@ -13,6 +13,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
+import vn.thanhtuanle.common.enums.DocumentType;
 import vn.thanhtuanle.common.enums.RegistrationPeriodsStatus;
 import vn.thanhtuanle.common.enums.TopicMemberRole;
 import vn.thanhtuanle.common.enums.TopicStatus;
@@ -30,6 +31,7 @@ import vn.thanhtuanle.service.UserService;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,6 +52,7 @@ public class TopicServiceImpl implements TopicService {
     private final TopicMembersRepository topicMembersRepository;
     private final UserRepository userRepository;
     private final RegistrationPeriodRepository registrationPeriodRepository;
+    private final DocumentRepository documentRepository;
 
     @Value("${spring.servlet.multipart.max-file-size}")
     private DataSize MAX_FILE_SIZE;
@@ -66,7 +69,9 @@ public class TopicServiceImpl implements TopicService {
             LocalDate startDate,
             LocalDate endDate,
             Long minBudget,
-            String investigator) {
+            String investigator,
+            String periodId
+    ) {
 
         log.info("Fetching all topics with query: {}", query);
         Specification<Topic> spec = Specification.where(null);
@@ -86,6 +91,11 @@ public class TopicServiceImpl implements TopicService {
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("englishName")), searchPattern)
                 );
             });
+        }
+
+        if (periodId != null) {
+            spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("registrationPeriod").get("id"), periodId));
         }
 
         // Filter by departmentId
@@ -354,6 +364,7 @@ public class TopicServiceImpl implements TopicService {
             topic.setAttachedDocuments(updatedDocs);
         }
 
+        topic.setStatus(TopicStatus.SUBMITTED);
         topic = topicRepository.save(topic);
 
         log.info("Updated topic with ID: {}", topic.getId());
@@ -627,18 +638,78 @@ public class TopicServiceImpl implements TopicService {
 
     @Transactional
     @Override
-    public void reviewTopic(String topicId, TopicStatus status, String notes) {
+    public TopicDTO reviewTopic(String topicId, boolean approved, MultipartFile file) {
         log.info("Reviewing topic with ID: {}", topicId);
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
 
-        if (topic.getStatus() != TopicStatus.SUBMITTED) {
-            throw new IllegalStateException("Only submitted topics can be reviewed.");
+//        if (topic.getStatus() != TopicStatus.SUBMITTED) {
+//            throw new IllegalStateException("Only submitted topics can be reviewed.");
+//        }
+
+        if(approved) {
+            topic.setStatus(TopicStatus.REVIEWED);
+        } else {
+            topic.setStatus(TopicStatus.NEED_REVISION);
         }
 
-        topic.setStatus(status);
-        topic.setAdditionalNotes(notes);
-        topicRepository.save(topic);
-        log.info("Reviewed topic with ID: {}. New status: {}", topicId, status);
+        Document document = new Document();
+        if (file != null && !file.isEmpty()) {
+            if (file.getSize() > MAX_FILE_SIZE.toBytes()) {
+                throw new IllegalArgumentException("File size exceeds the maximum limit of " + MAX_FILE_SIZE);
+            }
+            String fileUrl = "";
+            String publicId = "";
+            try {
+                Map result = cloudinaryService.upload(file);
+                fileUrl = String.valueOf(result.get("url"));
+                publicId = String.valueOf(result.get("public_id"));
+
+                document.setTopic(topic);
+                document.setDocumentType(DocumentType.REVIEW_RESULT.getLabel());
+                document.setFilePath(fileUrl);
+                document.setPublicId(publicId);
+                document.setUploadDate(LocalDateTime.now());
+                document.setOriginalFileName(file.getOriginalFilename());
+
+                documentRepository.save(document);
+            } catch (IOException e) {
+                log.error("Failed to upload PDF file for document: {}", file.getOriginalFilename(), e);
+                throw new RuntimeException("Failed to upload PDF file", e);
+            }
+        }
+        List<Document> documents = topic.getDocuments();
+        if (documents == null) {
+            documents = new ArrayList<>();
+        }
+        documents.add(document);
+        topic.setDocuments(documents);
+
+        Topic savedTopic = topicRepository.save(topic);
+        log.info("Reviewed topic with ID: {}. New status: {}", topicId, approved ? "REVIEWED" : "NEED_REVISION");
+
+        return modelMapper.map(savedTopic, TopicDTO.class);
+    }
+
+    @Transactional
+    @Override
+    public void assignCategory(List<String> topicIds, Integer categoryId) {
+        log.info("Assigning category with ID: {} to topics: {}", categoryId, topicIds);
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId.toString()));
+
+        List<Topic> topics = topicRepository.findAllById(topicIds);
+        if (topics.isEmpty()) {
+            throw new ResourceNotFoundException("Topics", "ids", topicIds.toString());
+        }
+
+        for (Topic topic : topics) {
+            topic.setCategory(category);
+
+        }
+
+        topicRepository.saveAll(topics);
+        log.info("Assigned category with ID: {} to {} topics", categoryId, topics.size());
     }
 }

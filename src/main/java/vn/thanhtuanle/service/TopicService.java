@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.TopicMemberRole;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.entity.TopicMember;
@@ -38,7 +39,8 @@ public interface TopicService {
             LocalDate startDate,
             LocalDate endDate,
             Long minBudget,
-            String investigator);
+            String investigator,
+            String periodId);
 
     TopicStatisticsResponse getTopicStatistics();
 
@@ -67,5 +69,8 @@ public interface TopicService {
     void rejectTopic(String topicId, String notes);
 
     @Transactional
-    void reviewTopic(String topicId, TopicStatus status, String notes);
+    TopicDTO reviewTopic(String topicId, boolean approved, MultipartFile file);
+
+    @Transactional
+    void assignCategory(List<String> topicIds, Integer categoryId);
 }

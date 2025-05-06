@@ -20,10 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.model.dto.TopicDTO;
-import vn.thanhtuanle.model.request.AssignToDepartmentRequest;
-import vn.thanhtuanle.model.request.AttachedDocumentCreation;
-import vn.thanhtuanle.model.request.SubmitTopicRequest;
-import vn.thanhtuanle.model.request.TopicCreateRequest;
+import vn.thanhtuanle.model.request.*;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.model.response.PageResponse;
 import vn.thanhtuanle.service.TopicService;
@@ -58,7 +55,9 @@ public class TopicController {
             @RequestParam(value = "startDate", required = false) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) LocalDate endDate,
             @RequestParam(value = "minBudget", required = false) Long minBudget,
-            @RequestParam(value = "investigator", required = false) String investigator) {
+            @RequestParam(value = "investigator", required = false) String investigator,
+            @RequestParam(value = "periodId", required = false) String periodId
+    ) {
 
         int adjustedPage = page - 1;
         if (adjustedPage < 0) adjustedPage = 0;
@@ -66,7 +65,7 @@ public class TopicController {
         Sort.Direction direction = "desc".equalsIgnoreCase(order) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(adjustedPage, size, direction, sort);
 
-        Page<TopicDTO> pageResult = topicService.getAll(pageable, query, status, departmentId, researchTypeId, researchFieldId, categoryId, startDate, endDate, minBudget, investigator);
+        Page<TopicDTO> pageResult = topicService.getAll(pageable, query, status, departmentId, researchTypeId, researchFieldId, categoryId, startDate, endDate, minBudget, investigator, periodId);
 
         PageResponse<?> pageResponse = PageResponse.<List<TopicDTO>>builder()
                 .status(HttpStatus.OK.value())
@@ -331,17 +330,17 @@ public class TopicController {
     }
 
     @Operation(summary = "Review Topic API", description = "Review a topic by ID")
-    @PostMapping("/{topicId}/review")
+    @PostMapping(value = "/{topicId}/review", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<BaseResponse<?>> reviewTopic(
             @PathVariable String topicId,
-            @RequestBody Map<String, Object> request) {
-        TopicStatus status = TopicStatus.valueOf(request.get("status").toString());
-        String notes = request.get("notes").toString();
-        topicService.reviewTopic(topicId, status, notes);
+            @RequestPart("pdfFile") MultipartFile pdfFile,
+            @Valid @RequestPart("approved") ApprovedRequest approved) {
+        log.info("Reviewing topic with ID: {}, approved: {}", topicId, approved);
+
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(null)
+                .data(topicService.reviewTopic(topicId, approved.isApproved(), pdfFile))
                 .build());
     }
 
@@ -367,6 +366,17 @@ public class TopicController {
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
+                .data(null)
+                .build());
+    }
+
+    @PostMapping("/assign-category")
+    @Operation(summary = "Assign Category to Topics", description = "Assign a category to multiple topics")
+    public ResponseEntity<BaseResponse<?>> assignCategory(@RequestBody AssignCategoryRequest request) {
+        topicService.assignCategory(request.getTopicIds(), request.getCategoryId());
+        return ResponseEntity.ok(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message("Category assigned successfully")
                 .data(null)
                 .build());
     }

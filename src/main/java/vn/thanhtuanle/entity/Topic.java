@@ -135,6 +135,15 @@ public class Topic extends BaseEntity {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
+    @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Document> documents;
+
+    @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TopicCouncil> topicCouncils = new ArrayList<>();
+
+    @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TopicApplication> applications = new ArrayList<>();
+
     @Embeddable
     @Setter
     @Getter
