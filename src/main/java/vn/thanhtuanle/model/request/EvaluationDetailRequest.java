@@ -17,10 +17,5 @@ public class EvaluationDetailRequest {
     private Integer budgetScore;
     private String additionalComments;
     private Integer totalScore;
-    private boolean passedAssessment;
-    private Integer approveCount;
-    private Integer rejectCount;
-    private Integer totalPresent;
-    private Integer totalAbsent;
 }
 

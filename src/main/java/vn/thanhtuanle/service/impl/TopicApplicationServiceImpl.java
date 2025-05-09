@@ -17,11 +17,14 @@ import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.TopicApplicationDTO;
 import vn.thanhtuanle.model.request.TopicApplicationRequest;
 import vn.thanhtuanle.model.response.TopicApplicationResponse;
+import vn.thanhtuanle.repository.CouncilMemberRepository;
+import vn.thanhtuanle.repository.EvaluationDetailRepository;
 import vn.thanhtuanle.repository.TopicApplicationRepository;
 import vn.thanhtuanle.repository.TopicRepository;
 import vn.thanhtuanle.service.TopicApplicationService;
 import vn.thanhtuanle.service.UserService;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -32,6 +35,8 @@ public class TopicApplicationServiceImpl implements TopicApplicationService {
     private final TopicRepository topicRepository;
     private final UserService userService;
     private final ModelMapper modelMapper;
+    private final CouncilMemberRepository councilMemberRepository;
+    private final EvaluationDetailRepository evaluationDetailRepository;
 
     @Override
     public Page<TopicApplicationResponse> getAllApplications(String query, String periodId, TopicStatus status, Pageable pageable) {
@@ -62,7 +67,7 @@ public class TopicApplicationServiceImpl implements TopicApplicationService {
             Optional<TopicApplication> topicApplication = topicApplicationRepository.findByTopicAndUser(topic, currentUser);
             TopicApplicationResponse response = modelMapper.map(topic, TopicApplicationResponse.class);
 
-            if(topicApplication.isPresent()) {
+            if (topicApplication.isPresent()) {
                 response.setApplicationId(topicApplication.get().getId());
                 response.setHasApplied(true);
                 response.setApplicationStatus(topicApplication.get().getStatus());
@@ -83,11 +88,23 @@ public class TopicApplicationServiceImpl implements TopicApplicationService {
     }
 
     @Override
-    public Page<TopicApplicationDTO> getApplicationsByTopic(String topicId, Pageable pageable) {
+    public List<TopicApplicationDTO> getApplicationsByTopic(String topicId) {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
-        return topicApplicationRepository.findAllByTopic(topic, pageable)
-                .map(application -> modelMapper.map(application, TopicApplicationDTO.class));
+
+        User user = userService.getCurrentUserEntity();
+        String currentUserId = user.getId();
+
+        return topicApplicationRepository.findAllByTopic(topic).stream()
+                .map(application -> {
+                    TopicApplicationDTO dto = modelMapper.map(application, TopicApplicationDTO.class);
+                    // Check if the current user has evaluated this application
+                    boolean hasEvaluated = evaluationDetailRepository.existsByEvaluationIdAndCouncilMemberUserId(
+                            application.getId(), currentUserId);
+                    dto.setHasEvaluated(hasEvaluated);
+                    return dto;
+                })
+                .toList();
     }
 
     @Override

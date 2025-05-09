@@ -41,8 +41,16 @@ public class Council extends BaseEntity {
     @Temporal(TemporalType.DATE)
     private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
+    private CouncilType type;
+
     private String notes;
+
+    private Boolean delFlag;
 
     @OneToMany(mappedBy = "council", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TopicCouncil> topicCouncils = new ArrayList<>();
+
+    @OneToMany(mappedBy = "council", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CouncilMember> councilMembers = new ArrayList<>();
 }

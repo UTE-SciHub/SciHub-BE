@@ -8,6 +8,7 @@ import vn.thanhtuanle.entity.Department;
 
 @Component("departmentExcelRowMapper")
 public class DepartmentExcelRowMapper implements ExcelRowMapper<Department> {
+
     private static final Integer COL_ID = 0;
     private static final Integer COL_NAME = 1;
     private static final Integer COL_PHONE_NUMBER = 2;

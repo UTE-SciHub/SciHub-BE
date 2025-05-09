@@ -6,5 +6,6 @@ public enum RoleType {
     ADMIN,
     BGH,
     PQLKHHTQT,
-    BCNKHOA
+    BCNKHOA,
+    COUNCIL_MEMBER,
 }

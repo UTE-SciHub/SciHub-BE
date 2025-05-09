@@ -15,11 +15,14 @@ import org.springframework.web.bind.annotation.*;
 import vn.thanhtuanle.common.enums.ApplicationStatus;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.common.enums.TopicStatus;
+import vn.thanhtuanle.model.dto.EvaluationDetailDTO;
 import vn.thanhtuanle.model.dto.TopicApplicationDTO;
+import vn.thanhtuanle.model.request.EvaluationDetailRequest;
 import vn.thanhtuanle.model.request.TopicApplicationRequest;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.model.response.PageResponse;
 import vn.thanhtuanle.model.response.TopicApplicationResponse;
+import vn.thanhtuanle.service.EvaluationService;
 import vn.thanhtuanle.service.TopicApplicationService;
 
 import java.util.List;
@@ -33,6 +36,7 @@ import java.util.Map;
 public class TopicApplicationController {
 
     private final TopicApplicationService topicApplicationService;
+    private final EvaluationService evaluationService;
 
     @Operation(summary = "Get All Topic Applications", description = "Retrieve all topic applications with optional filters")
     @GetMapping
@@ -68,31 +72,16 @@ public class TopicApplicationController {
 
     @Operation(summary = "Get Applications by Topic", description = "Retrieve all applications for a specific topic")
     @GetMapping("/topic/{topicId}")
-    public ResponseEntity<BaseResponse<?>> getApplicationsByTopic(
-            @PathVariable String topicId,
-            @RequestParam(value = "p", defaultValue = "1") int page,
-            @RequestParam(value = "s", defaultValue = "10") int size,
-            @RequestParam(value = "sort", defaultValue = "createdAt") String sort,
-            @RequestParam(value = "order", defaultValue = "desc") String order) {
-        int adjustedPage = page - 1;
-        if (adjustedPage < 0) adjustedPage = 0;
-
-        Sort.Direction direction = "desc".equalsIgnoreCase(order) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(adjustedPage, size, direction, sort);
-
-        Page<TopicApplicationDTO> pageResult = topicApplicationService.getApplicationsByTopic(topicId, pageable);
-
-        PageResponse<?> pageResponse = PageResponse.<List<TopicApplicationDTO>>builder()
+    public ResponseEntity<BaseResponse<?>> getApplicationsByTopic (
+            @PathVariable String topicId
+    ) {
+        BaseResponse<?> response = BaseResponse.builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .currentPage(page)
-                .totalPages(pageResult.getTotalPages())
-                .totalItems(pageResult.getTotalElements())
-                .itemsPerPage(size)
-                .data(pageResult.getContent())
+                .data(topicApplicationService.getApplicationsByTopic(topicId))
                 .build();
 
-        return ResponseEntity.status(HttpStatus.OK).body(pageResponse);
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Get Applications by Topic and User", description = "Retrieve all applications for a specific topic and user")
@@ -167,6 +156,18 @@ public class TopicApplicationController {
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
                 .data(null)
+                .build());
+    }
+
+    @Operation(summary = "Evaluate Topic Application", description = "Evaluate a topic application")
+    @PostMapping("/{id}/evaluate")
+    public ResponseEntity<BaseResponse<?>> evaluate(
+            @PathVariable Long id,
+            @RequestBody EvaluationDetailRequest request) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(evaluationService.submitEvaluation(id, request))
                 .build());
     }
 }

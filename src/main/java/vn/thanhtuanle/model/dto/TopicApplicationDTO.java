@@ -25,4 +25,6 @@ public class TopicApplicationDTO extends BaseDTO {
     private Boolean passed;
 
     private String notes;
+
+    private Boolean hasEvaluated;
 }

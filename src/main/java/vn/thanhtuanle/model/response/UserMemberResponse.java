@@ -8,6 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class UserMemberResponse {
+    private String id;
     private String email;
     private String name;
     private String phoneNumber;

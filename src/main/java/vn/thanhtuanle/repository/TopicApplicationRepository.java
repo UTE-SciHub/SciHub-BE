@@ -9,6 +9,7 @@ import vn.thanhtuanle.entity.Topic;
 import vn.thanhtuanle.entity.TopicApplication;
 import vn.thanhtuanle.entity.User;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TopicApplicationRepository extends JpaRepository<TopicApplication, Long>, JpaSpecificationExecutor<TopicApplication> {
@@ -19,7 +20,7 @@ public interface TopicApplicationRepository extends JpaRepository<TopicApplicati
 
     Optional<TopicApplication> findByTopicAndUser(Topic topic, User user);
 
-    Page<TopicApplication> findAllByTopic(Topic topic, Pageable pageable);
+    List<TopicApplication> findAllByTopic(Topic topic);
 
     Page<TopicApplication> findAllByTopicAndUser(Topic topic, User user, Pageable pageable);
 

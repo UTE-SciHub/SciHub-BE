@@ -160,4 +160,14 @@ public class UserController {
                 .message(Constant.SUCCESS.getValue()).data(userService.changeStatus(id, status))
                 .build());
     }
+
+    @Operation(summary = "Get all user not student API", description = "Get all user not student with optional search")
+    @GetMapping("/not-student")
+    public ResponseEntity<?> getAllUserNotStudent(@RequestParam(value = "q", required = false) String query) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<List<UserDTO>>builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(userService.findAllUserNotStudent(query))
+                .build());
+    }
 }

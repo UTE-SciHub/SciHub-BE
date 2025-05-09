@@ -24,8 +24,5 @@ public class TopicCouncil extends BaseEntity {
     @JoinColumn(name = "council_id", nullable = false)
     private Council council;
 
-    @Enumerated(EnumType.STRING)
-    private CouncilType type;
-
     private String notes;
 }

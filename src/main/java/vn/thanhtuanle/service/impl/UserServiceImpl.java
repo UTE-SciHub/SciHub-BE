@@ -1,5 +1,6 @@
 package vn.thanhtuanle.service.impl;
 
+import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -42,6 +43,7 @@ import org.modelmapper.ModelMapper;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -318,6 +320,31 @@ public class UserServiceImpl implements UserService {
     public User getUserById(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+    }
+
+    @Override
+    public List<UserDTO> findAllUserNotStudent(String query) {
+        Specification<User> spec = userNotStudentAndSearch(query);
+        List<User> users = userRepository.findAll(spec);
+        return users.stream()
+                .map(user -> modelMapper.map(user, UserDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    public static Specification<User> userNotStudentAndSearch(String query) {
+        return (root, cq, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (query != null && !query.trim().isEmpty()) {
+                String searchPattern = "%" + query.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), searchPattern),
+                        cb.like(cb.lower(root.get("email")), searchPattern)
+                ));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     private String getCellValue(Cell cell) {

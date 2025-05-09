@@ -43,4 +43,6 @@ public interface UserService {
     User getCurrentUserEntity();
 
     User getUserById(String id);
+
+    List<UserDTO> findAllUserNotStudent(String query);
 }
