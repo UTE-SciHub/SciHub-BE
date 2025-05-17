@@ -23,6 +23,7 @@ import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.*;
 import vn.thanhtuanle.model.request.AssignToDepartmentRequest;
 import vn.thanhtuanle.model.request.AttachedDocumentCreation;
+import vn.thanhtuanle.model.request.CouncilApprovalRequest;
 import vn.thanhtuanle.model.request.TopicCreateRequest;
 import vn.thanhtuanle.model.response.TopicStatisticsResponse;
 import vn.thanhtuanle.repository.*;
@@ -53,6 +54,7 @@ public class TopicServiceImpl implements TopicService {
     private final UserRepository userRepository;
     private final RegistrationPeriodRepository registrationPeriodRepository;
     private final DocumentRepository documentRepository;
+    private final CouncilRepository councilRepository;
 
     @Value("${spring.servlet.multipart.max-file-size}")
     private DataSize MAX_FILE_SIZE;
@@ -186,6 +188,7 @@ public class TopicServiceImpl implements TopicService {
         topic.setStatus(TopicStatus.DRAFT);
 
         List<Topic.AttachedDocument> attachedDocs = new ArrayList<>();
+        List<Document> documents = new ArrayList<>();
         if (req.getAttachedDocuments() != null) {
             for (AttachedDocumentCreation docDTO : req.getAttachedDocuments()) {
                 if (docDTO.getId() != null) {
@@ -211,6 +214,17 @@ public class TopicServiceImpl implements TopicService {
                         doc.setFilePath(fileUrl);
                         doc.setPublicId(publicId);
                         doc.setOriginalFileName(file.getOriginalFilename());
+
+                        Document document = Document.builder()
+                                .topic(topic)
+                                .documentType(DocumentType.TOPIC_REGISTRATION.getLabel())
+                                .filePath(fileUrl)
+                                .publicId(publicId)
+                                .uploadDate(LocalDateTime.now())
+                                .originalFileName(file.getOriginalFilename())
+                                .build();
+
+                        documents.add(document);
                     } catch (IOException e) {
                         log.error("Failed to upload PDF file for document: {}", docDTO.getDescription(), e);
                         throw new RuntimeException("Failed to upload PDF file", e);
@@ -222,8 +236,9 @@ public class TopicServiceImpl implements TopicService {
                 attachedDocs.add(doc);
             }
         }
-        topic.setAttachedDocuments(attachedDocs);
 
+        topic.setDocuments(documents);
+        topic.setAttachedDocuments(attachedDocs);
         topic = topicRepository.save(topic);
 
         UserDTO currentUser = userService.getCurrentUser();
@@ -254,36 +269,36 @@ public class TopicServiceImpl implements TopicService {
         Topic topic = topicRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", id));
 
+        // Update research field
         if (topicDTO.getField() != null) {
             ResearchField researchField = researchFieldRepository.findById(Integer.parseInt(topicDTO.getField()))
                     .orElseThrow(() -> new ResourceNotFoundException("ResearchField", "id", topicDTO.getField()));
             topic.setResearchField(researchField);
         }
 
+        // Update research type
         if (topicDTO.getResearchType() != null) {
             ResearchType researchType = researchTypeRepository.findById(Integer.parseInt(topicDTO.getResearchType()))
                     .orElseThrow(() -> new ResourceNotFoundException("ResearchType", "id", topicDTO.getResearchType()));
             topic.setResearchType(researchType);
         }
 
+        // Update category
         if (topicDTO.getCategory() != null) {
             Category category = categoryRepository.findById(Integer.parseInt(topicDTO.getCategory()))
                     .orElseThrow(() -> new ResourceNotFoundException("Category", "id", topicDTO.getCategory()));
             topic.setCategory(category);
         }
 
+        // Update expected products
         if (topicDTO.getExpectedProducts() != null) {
-            String expectedProductsJson = objectMapper.writeValueAsString(topicDTO.getExpectedProducts());
+            ExpectedProductDTO sanitizedExpectedProducts = getExpectedProductDTO(topicDTO);
+            String expectedProductsJson = objectMapper.writeValueAsString(sanitizedExpectedProducts);
+            log.info("Expected products after serialization: {}", expectedProductsJson);
             topic.setExpectedProducts(expectedProductsJson);
         }
 
-        if (topicDTO.getBudgetBreakdown() != null) {
-            String budgetBreakdownJson = objectMapper.writeValueAsString(topicDTO.getBudgetBreakdown());
-            topic.setBudgetBreakdown(budgetBreakdownJson);
-        }
-
-        modelMapper.map(topicDTO, topic);
-
+        // Update budget breakdown
         if (topicDTO.getBudgetBreakdown() != null) {
             List<BudgetBreakdownDTO> sanitizedBudgetBreakdown = topicDTO.getBudgetBreakdown().stream()
                     .map(dto -> {
@@ -294,77 +309,81 @@ public class TopicServiceImpl implements TopicService {
                         return sanitized;
                     })
                     .collect(Collectors.toList());
-
             String budgetBreakdownJson = objectMapper.writeValueAsString(sanitizedBudgetBreakdown);
             log.info("Budget breakdown after serialization: {}", budgetBreakdownJson);
             topic.setBudgetBreakdown(budgetBreakdownJson);
         }
 
-        if (topicDTO.getExpectedProducts() != null) {
-            ExpectedProductDTO sanitizedExpectedProducts = getExpectedProductDTO(topicDTO);
-
-            String expectedProductsJson = objectMapper.writeValueAsString(sanitizedExpectedProducts);
-            log.info("Expected products after serialization: {}", expectedProductsJson);
-            topic.setExpectedProducts(expectedProductsJson);
-        }
-
+        // Update total budget and remaining budget
         if (topicDTO.getTotalBudget() != 0) {
             topic.setRemainingBudget(topicDTO.getTotalBudget());
         }
 
+        // Update attached documents
         if (topicDTO.getAttachedDocuments() != null) {
-            List<Topic.AttachedDocument> existingDocs = topic.getAttachedDocuments() != null ? topic.getAttachedDocuments() : new ArrayList<>();
-            List<Topic.AttachedDocument> updatedDocs = new ArrayList<>();
+            List<Topic.AttachedDocument> existingDocs = topic.getAttachedDocuments() != null ? new ArrayList<>(topic.getAttachedDocuments()) : new ArrayList<>();
+            List<Document> existingDocuments = topic.getDocuments() != null ? new ArrayList<>(topic.getDocuments()) : new ArrayList<>();
+            Map<String, Topic.AttachedDocument> docMap = existingDocs.stream()
+                    .filter(d -> d.getPublicId() != null)
+                    .collect(Collectors.toMap(Topic.AttachedDocument::getPublicId, d -> d));
+            Map<String, Document> docEntityMap = existingDocuments.stream()
+                    .filter(d -> d.getPublicId() != null)
+                    .collect(Collectors.toMap(Document::getPublicId, d -> d));
 
             for (AttachedDocumentCreation docDTO : topicDTO.getAttachedDocuments()) {
                 Topic.AttachedDocument doc;
+                Document docEntity;
 
                 if (docDTO.getId() != null) {
-                    doc = existingDocs.stream()
-                            .filter(d -> d.getPublicId() != null && d.getPublicId().equals(docDTO.getId()))
-                            .findFirst()
-                            .orElse(null);
-                    if (doc != null) {
-                        // Update description if provided
-                        doc.setDescription(docDTO.getDescription());
-                        updatedDocs.add(doc);
-                        continue;
+                    // Update existing document
+                    doc = docMap.get(docDTO.getId());
+                    docEntity = docEntityMap.get(docDTO.getId());
+                    if (doc == null || docEntity == null) {
+                        throw new ResourceNotFoundException("AttachedDocument", "id", docDTO.getId());
                     }
+                    doc.setDescription(docDTO.getDescription());
+                } else {
+                    // Create new document
+                    doc = new Topic.AttachedDocument();
+                    doc.setDescription(docDTO.getDescription());
+                    docEntity = new Document();
+                    docEntity.setTopic(topic);
+                    docEntity.setDocumentType(DocumentType.TOPIC_REGISTRATION.getLabel());
+                    docEntity.setUploadDate(LocalDateTime.now());
+
+                    MultipartFile file = docDTO.getFile();
+                    if (file != null && !file.isEmpty()) {
+                        if (file.getSize() > MAX_FILE_SIZE.toBytes()) {
+                            throw new IllegalArgumentException("File size exceeds the maximum limit of " + MAX_FILE_SIZE);
+                        }
+                        try {
+                            Map result = cloudinaryService.upload(file);
+                            String fileUrl = String.valueOf(result.get("url"));
+                            String publicId = String.valueOf(result.get("public_id"));
+
+                            doc.setFilePath(fileUrl);
+                            doc.setPublicId(publicId);
+                            doc.setOriginalFileName(file.getOriginalFilename());
+                            docEntity.setFilePath(fileUrl);
+                            docEntity.setPublicId(publicId);
+                            docEntity.setOriginalFileName(file.getOriginalFilename());
+                        } catch (IOException e) {
+                            log.error("Failed to upload PDF file for document: {}", docDTO.getDescription(), e);
+                            throw new RuntimeException("Failed to upload PDF file", e);
+                        }
+                    } else {
+                        throw new IllegalArgumentException("File is required for new attached documents");
+                    }
+                    existingDocs.add(doc);
+                    existingDocuments.add(docEntity);
                 }
-
-                doc = new Topic.AttachedDocument();
-                doc.setDescription(docDTO.getDescription());
-
-                MultipartFile file = docDTO.getFile();
-                if (file != null && !file.isEmpty()) {
-                    if (file.getSize() > MAX_FILE_SIZE.toBytes()) {
-                        throw new IllegalArgumentException("File size exceeds the maximum limit of " + MAX_FILE_SIZE);
-                    }
-                    String fileUrl = "";
-                    String publicId = "";
-                    try {
-                        Map result = cloudinaryService.upload(file);
-                        fileUrl = String.valueOf(result.get("url"));
-                        publicId = String.valueOf(result.get("public_id"));
-
-                        doc.setFilePath(fileUrl);
-                        doc.setPublicId(publicId);
-                        doc.setOriginalFileName(file.getOriginalFilename());
-                    } catch (IOException e) {
-                        log.error("Failed to upload PDF file for document: {}", docDTO.getDescription(), e);
-                        throw new RuntimeException("Failed to upload PDF file", e);
-                    }
-                } else if (docDTO.getId() == null) {
-                    throw new IllegalArgumentException("File is required for new attached documents");
-                }
-
-                updatedDocs.add(doc);
             }
 
-            topic.setAttachedDocuments(updatedDocs);
+            topic.setAttachedDocuments(existingDocs);
+            topic.setDocuments(existingDocuments);
         }
 
-        topic.setStatus(TopicStatus.SUBMITTED);
+        topic.setStatus(TopicStatus.DRAFT);
         topic = topicRepository.save(topic);
 
         log.info("Updated topic with ID: {}", topic.getId());
@@ -577,6 +596,25 @@ public class TopicServiceImpl implements TopicService {
         return modelMapper.map(savedTopic, TopicDTO.class);
     }
 
+    @Transactional
+    @Override
+    public void unassignDepartment(String topicId) {
+        log.info("Unassigning department from topic with ID: {}", topicId);
+        Topic topic = topicRepository.findById(topicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
+
+        if (topic.getStatus() != TopicStatus.ASSIGNED) {
+            throw new IllegalStateException("Đề tài chưa được phân công");
+        }
+
+        topic.setDepartment(null);
+        topic.setStatus(TopicStatus.SUBMITTED);
+        topic.setAdditionalNotes("");
+
+        topicRepository.save(topic);
+        log.info("Successfully unassigned department from topic with ID: {}", topicId);
+    }
+
     @Override
     public Page<TopicDTO> getTopicsByDepartment(String departmentEmail, String query, Pageable pageable) {
         log.info("Fetching topics for department with ID: {}", departmentEmail);
@@ -613,7 +651,7 @@ public class TopicServiceImpl implements TopicService {
             throw new IllegalStateException("Chỉ những đề tài được phân công mới có thể chấp nhận.");
         }
 
-        topic.setStatus(TopicStatus.APPROVED);
+        topic.setStatus(TopicStatus.REVIEWED);
         topic.setAdditionalNotes(notes);
         topicRepository.save(topic);
         log.info("Approved topic with ID: {}", topicId);
@@ -643,14 +681,10 @@ public class TopicServiceImpl implements TopicService {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
 
-//        if (topic.getStatus() != TopicStatus.SUBMITTED) {
-//            throw new IllegalStateException("Only submitted topics can be reviewed.");
-//        }
-
         if(approved) {
-            topic.setStatus(TopicStatus.REVIEWED);
+            topic.setStatus(TopicStatus.IN_CATALOG);
         } else {
-            topic.setStatus(TopicStatus.NEED_REVISION);
+            topic.setStatus(TopicStatus.REJECTED);
         }
 
         Document document = new Document();
@@ -711,5 +745,30 @@ public class TopicServiceImpl implements TopicService {
 
         topicRepository.saveAll(topics);
         log.info("Assigned category with ID: {} to {} topics", categoryId, topics.size());
+    }
+
+    @Transactional
+    @Override
+    public void approveTopicsByCouncil(CouncilApprovalRequest request) {
+        log.info("Approving topics through council ID: {}", request.getCouncilId());
+
+        Council council = councilRepository.findById(request.getCouncilId())
+                .orElseThrow(() -> new ResourceNotFoundException("Council", "id", request.getCouncilId()));
+
+        for (CouncilApprovalRequest.TopicApproval approval : request.getTopics()) {
+            Topic topic = topicRepository.findById(approval.getTopicId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", approval.getTopicId()));
+
+            // Update topic
+            topic.setStatus(TopicStatus.APPROVED);
+            topic.setApprovedBudget(approval.getApprovedBudget());
+            topic.setRemainingBudget(approval.getApprovedBudget());
+            topic.setApprovalDecisionCode(request.getDecisionNumber());
+
+            topicRepository.save(topic);
+        }
+
+        log.info("Successfully approved {} topics through council ID: {}",
+                request.getTopics().size(), request.getCouncilId());
     }
 }

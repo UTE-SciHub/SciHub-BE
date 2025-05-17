@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import vn.thanhtuanle.common.enums.ErrorCode;
 import vn.thanhtuanle.common.enums.RoleType;
+import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.common.mapper.CouncilExportData;
 import vn.thanhtuanle.common.service.ExcelExporter;
 import vn.thanhtuanle.common.service.ExcelRowMapper;
@@ -441,6 +442,29 @@ public class CouncilServiceImpl implements CouncilService {
         } catch (IOException e) {
             throw new AppException(ErrorCode.EXCEL_EXPORT_ERROR);
         }
+    }
+
+    @Override
+    public List<TopicDTO> getApprovedTopicsByCouncil(Long councilId) {
+        Council council = councilRepository.findById(councilId)
+                .orElseThrow(() -> new ResourceNotFoundException("Council", "id", councilId));
+
+        return council.getTopicCouncils().stream()
+                .filter(topicCouncil -> TopicStatus.IN_CATALOG.equals(topicCouncil.getTopic().getStatus()))
+                .map(topicCouncil -> modelMapper.map(topicCouncil.getTopic(), TopicDTO.class))
+                .toList();
+    }
+
+    @Override
+    public List<TopicCouncilDTO> getTopicByCouncilMemberId(Long memberId) {
+        CouncilMember councilMember = councilMemberRepository.findById(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("CouncilMember", "id", memberId));
+
+        List<TopicCouncil> topicCouncils = topicCouncilRepository.findByCouncil(councilMember.getCouncil());
+
+        return topicCouncils.stream()
+                .map(topicCouncil -> modelMapper.map(topicCouncil, TopicCouncilDTO.class))
+                .toList();
     }
 
     private Specification<Council> createSpecification(String query, String type, String status, LocalDate startDate, LocalDate endDate, Boolean delFlag, Boolean isAdmin) {

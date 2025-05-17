@@ -170,4 +170,15 @@ public class UserController {
                 .data(userService.findAllUserNotStudent(query))
                 .build());
     }
+
+    @Operation(summary = "Get User by Email", description = "Retrieve a user by their email address")
+    @GetMapping("/email")
+    public ResponseEntity<BaseResponse<?>> getUserByEmail(@RequestParam("email") String email) {
+        UserDTO user = userService.getUserByEmail(email);
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(user)
+                .build());
+    }
 }

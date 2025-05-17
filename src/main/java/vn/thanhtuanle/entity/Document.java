@@ -1,16 +1,18 @@
 package vn.thanhtuanle.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tbl_documents")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
-public class Document {
+@AllArgsConstructor
+@Builder
+public class Document extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

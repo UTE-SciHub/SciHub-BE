@@ -37,6 +37,8 @@ public class TopicDTO extends BaseDTO {
 
     private String expectedRisks;
 
+    private String approvalDecisionCode;
+
     @NotEmpty(message = "Keywords cannot be empty")
     private List<String> keywords = new ArrayList<>();
 

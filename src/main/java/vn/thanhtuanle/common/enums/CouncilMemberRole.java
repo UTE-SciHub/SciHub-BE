@@ -4,5 +4,5 @@ public enum CouncilMemberRole {
     CHAIRMAN,
     MEMBER,
     SECRETARY,
-    EXTERNAL_MEMBER;
+    REVIEWER;
 }

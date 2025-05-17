@@ -10,6 +10,7 @@ import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.entity.TopicMember;
 import vn.thanhtuanle.model.dto.TopicDTO;
 import vn.thanhtuanle.model.request.AssignToDepartmentRequest;
+import vn.thanhtuanle.model.request.CouncilApprovalRequest;
 import vn.thanhtuanle.model.request.TopicCreateRequest;
 import vn.thanhtuanle.model.response.TopicStatisticsResponse;
 
@@ -60,6 +61,9 @@ public interface TopicService {
     @Transactional
     TopicDTO assignToDepartment(String topicId, AssignToDepartmentRequest request);
 
+    @Transactional
+    void unassignDepartment(String topicId);
+
     Page<TopicDTO> getTopicsByDepartment(String departmentEmail, String query, Pageable pageable);
 
     @Transactional
@@ -73,4 +77,7 @@ public interface TopicService {
 
     @Transactional
     void assignCategory(List<String> topicIds, Integer categoryId);
+
+    @Transactional
+    void approveTopicsByCouncil(CouncilApprovalRequest request);
 }

@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 import vn.thanhtuanle.common.enums.ApplicationStatus;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.common.enums.TopicStatus;
-import vn.thanhtuanle.model.dto.EvaluationDetailDTO;
 import vn.thanhtuanle.model.dto.TopicApplicationDTO;
 import vn.thanhtuanle.model.request.EvaluationDetailRequest;
 import vn.thanhtuanle.model.request.TopicApplicationRequest;
@@ -168,6 +167,19 @@ public class TopicApplicationController {
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
                 .data(evaluationService.submitEvaluation(id, request))
+                .build());
+    }
+
+    @Operation(summary = "Determine Principal Investigator for a Topic", description = "Determine the principal investigator for a topic within a council and return ranked applications")
+    @PostMapping("/council/{councilId}/topic/{topicId}/summary")
+    public ResponseEntity<BaseResponse<?>> determinePrincipalInvestigator(
+            @PathVariable Long councilId,
+            @PathVariable String topicId) {
+        List<TopicApplicationDTO> rankedApplications = evaluationService.determinePrincipalInvestigator(councilId, topicId);
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(rankedApplications)
                 .build());
     }
 }

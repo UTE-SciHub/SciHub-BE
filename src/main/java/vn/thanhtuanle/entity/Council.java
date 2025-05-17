@@ -53,4 +53,7 @@ public class Council extends BaseEntity {
 
     @OneToMany(mappedBy = "council", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CouncilMember> councilMembers = new ArrayList<>();
+
+    @OneToMany(mappedBy = "council", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews = new ArrayList<>();
 }

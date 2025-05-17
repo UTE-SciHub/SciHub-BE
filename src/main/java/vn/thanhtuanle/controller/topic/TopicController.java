@@ -298,6 +298,17 @@ public class TopicController {
                 .build());
     }
 
+    @Operation(summary = "Unassign Topic from Department", description = "Remove a topic's department assignment")
+    @PostMapping("/{topicId}/unassign")
+    public ResponseEntity<BaseResponse<?>> unassignDepartment(@PathVariable String topicId) {
+        topicService.unassignDepartment(topicId);
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(null)
+                .build());
+    }
+
     @Operation(summary = "Get Topic by department API", description = "Get topics by department ID")
     @GetMapping("/department/{departmentId}")
     public ResponseEntity<BaseResponse<?>> getTopicsByDepartmentId(
@@ -378,6 +389,17 @@ public class TopicController {
                 .status(HttpStatus.OK.value())
                 .message("Category assigned successfully")
                 .data(null)
+                .build());
+    }
+
+    @Operation(summary = "Approve Topics by Council", description = "Approve multiple topics with budget through a council")
+    @PostMapping("/council-approval")
+    public ResponseEntity<BaseResponse<?>> approveTopicsByCouncil(@Valid @RequestBody CouncilApprovalRequest request) {
+        topicService.approveTopicsByCouncil(request);
+
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
                 .build());
     }
 }

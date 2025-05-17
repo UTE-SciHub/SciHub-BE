@@ -3,6 +3,8 @@ package vn.thanhtuanle.service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import vn.thanhtuanle.model.dto.CouncilDTO;
+import vn.thanhtuanle.model.dto.TopicCouncilDTO;
+import vn.thanhtuanle.model.dto.TopicDTO;
 import vn.thanhtuanle.model.request.CreateCouncilRequest;
 
 import java.time.LocalDate;
@@ -20,4 +22,8 @@ public interface CouncilService {
     void softDeleteCouncil(Long id);
 
     byte[] exportExcel(String query, String type, String status, String sort, String order, LocalDate startDate, LocalDate endDate, Boolean delFlag, Boolean isAdmin, Boolean includeMembers, Boolean includeTopics, List<Long> selectedIds);
+
+    List<TopicDTO> getApprovedTopicsByCouncil(Long councilId);
+
+    List<TopicCouncilDTO> getTopicByCouncilMemberId(Long memberId);
 }

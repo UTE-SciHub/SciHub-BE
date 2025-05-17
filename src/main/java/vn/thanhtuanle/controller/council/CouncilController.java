@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.model.dto.CouncilDTO;
+import vn.thanhtuanle.model.dto.TopicDTO;
 import vn.thanhtuanle.model.request.CreateCouncilRequest;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.model.response.PageResponse;
@@ -139,5 +140,17 @@ public class CouncilController {
         headers.setContentLength(excelData.length);
 
         return new ResponseEntity<>(excelData, headers, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Get Approved Topics of a Council", description = "Retrieve all topics of a council with status APPROVED")
+    @GetMapping("/{id}/approved-topics")
+    public ResponseEntity<BaseResponse<?>> getApprovedTopicsByCouncil(@PathVariable Long id) {
+        List<TopicDTO> approvedTopics = councilService.getApprovedTopicsByCouncil(id);
+
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(approvedTopics)
+                .build());
     }
 }

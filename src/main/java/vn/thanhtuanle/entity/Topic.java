@@ -102,6 +102,9 @@ public class Topic extends BaseEntity {
     @Column(name = "council")
     private String council;
 
+    @Column(name = "approval_decision_code")
+    private String approvalDecisionCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registration_period_id", nullable = false)
     private RegistrationPeriod registrationPeriod;
@@ -143,6 +146,9 @@ public class Topic extends BaseEntity {
 
     @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TopicApplication> applications = new ArrayList<>();
+
+    @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Milestone> milestones = new ArrayList<>();
 
     @Embeddable
     @Setter

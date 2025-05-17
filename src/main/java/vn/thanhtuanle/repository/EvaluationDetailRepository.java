@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import vn.thanhtuanle.entity.EvaluationDetail;
 
+import java.util.List;
+
 public interface EvaluationDetailRepository extends JpaRepository<EvaluationDetail, Long> {
 
     @Query("""
@@ -20,4 +22,8 @@ public interface EvaluationDetailRepository extends JpaRepository<EvaluationDeta
             @Param("evaluatorId") String evaluatorId
     );
 
+    @Query("SELECT ed FROM EvaluationDetail ed " +
+            "WHERE ed.evaluation.id = :applicationId " +
+            "AND ed.councilMember.council.id = :councilId")
+    List<EvaluationDetail> findByApplicationIdAndCouncilId(Long applicationId, Long councilId);
 }
