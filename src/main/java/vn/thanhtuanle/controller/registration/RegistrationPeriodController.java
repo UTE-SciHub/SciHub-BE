@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.common.enums.RegistrationPeriodsStatus;
-import vn.thanhtuanle.common.enums.UserStatus;
 import vn.thanhtuanle.model.dto.RegistrationPeriodDTO;
 import vn.thanhtuanle.model.request.RegistrationPeriodRequest;
 import vn.thanhtuanle.model.request.UpdateRegistrationRequest;
@@ -49,13 +48,14 @@ public class RegistrationPeriodController {
             @RequestParam(value = "startDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Integer year
     ) {
         int adjustedPage = Math.max(0, page - 1);
         Sort.Direction direction = "desc".equalsIgnoreCase(order) ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(adjustedPage, size, direction, sort);
 
-        Page<RegistrationPeriodDTO> pageResult = registrationPeriodService.getAll(pageable, query, status, startDate, endDate);
+        Page<RegistrationPeriodDTO> pageResult = registrationPeriodService.getAll(pageable, query, status, startDate, endDate, year);
 
         PageResponse<?> pageResponse = PageResponse.<List<RegistrationPeriodDTO>>builder()
                 .status(HttpStatus.OK.value())
@@ -125,9 +125,10 @@ public class RegistrationPeriodController {
             @RequestParam(value = "startDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Integer year
     ) {
-        byte[] excelFile = registrationPeriodService.exportExcel(query, status, sort, order, startDate, endDate);
+        byte[] excelFile = registrationPeriodService.exportExcel(query, status, sort, order, startDate, endDate, year);
 
         String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         String fileName = "registrations_" + timestamp + ".xlsx";

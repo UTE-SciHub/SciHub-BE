@@ -1,5 +1,6 @@
 package vn.thanhtuanle.service.impl;
 
+import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -16,18 +17,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.ErrorCode;
 import vn.thanhtuanle.common.enums.ErrorType;
 import vn.thanhtuanle.common.enums.RoleType;
 import vn.thanhtuanle.common.enums.UserStatus;
 import vn.thanhtuanle.common.mapper.ExcelExporterFactory;
-import vn.thanhtuanle.common.mapper.UserExcelRowMapper;
-import vn.thanhtuanle.common.service.ExcelExporter;
-import vn.thanhtuanle.common.service.ExcelRowMapper;
-import vn.thanhtuanle.common.service.JwtService;
+import vn.thanhtuanle.common.service.*;
 import vn.thanhtuanle.entity.Role;
 import vn.thanhtuanle.entity.User;
 import vn.thanhtuanle.exception.AppException;
@@ -43,6 +43,7 @@ import org.modelmapper.ModelMapper;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -58,9 +59,13 @@ public class UserServiceImpl implements UserService {
     @Qualifier("userExcelRowMapper")
     private final ExcelRowMapper<User> userExcelRowMapper;
     private final Validator validator;
+    private final CloudinaryService cloudinaryService;
 
     @Value("${application.user.password.default}")
     private String USER_PASSWORD_DEFAULT;
+
+    @Value("${spring.servlet.multipart.max-file-size}")
+    private DataSize MAX_FILE_SIZE;
 
     private final List<String> EXCEL_HEADERS = List.of(
             "Mã sinh viên/giáo viên",
@@ -75,7 +80,7 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
-    public UserDTO create(UserRequest req) {
+    public UserDTO create(UserRequest req, MultipartFile avatar) throws IOException {
         log.info("Create user with email: {}", req.getEmail());
         boolean exists = isUserExist(req.getEmail());
         if (exists) {
@@ -85,20 +90,35 @@ public class UserServiceImpl implements UserService {
 
         String id = req.getEmail().split("@")[0];
 
-        Role role = roleRepository.findByName(RoleType.STUDENT)
+        Role role = roleRepository.findByName(req.getRole())
                 .orElseThrow(() -> {
-                    log.warn("Role not found with name: {}", RoleType.STUDENT);
-                    return new ResourceNotFoundException("Role", "name", RoleType.STUDENT.name());
+                    log.warn("Role not found with name: {}", req.getRole());
+                    return new ResourceNotFoundException("Role", "name", req.getRole().name());
                 });
-        User user = User.builder()
-                .id(id)
-                .email(req.getEmail())
-                .password(encoder.encode(USER_PASSWORD_DEFAULT))
-                .name(req.getName())
-                .phoneNumber(req.getPhoneNumber())
-                .status(UserStatus.ACTIVE)
-                .roles(Set.of(role))
-                .build();
+
+        String avatarUrl = null;
+        String publicId = null;
+        if (avatar != null && !avatar.isEmpty()) {
+            if (avatar.getSize() > MAX_FILE_SIZE.toBytes()) {
+                throw new IllegalArgumentException("File vượt quá kích thước tối đa cho phép: " + MAX_FILE_SIZE + " bytes");
+            }
+
+            try {
+                Map result = cloudinaryService.upload(avatar);
+                avatarUrl = String.valueOf(result.get("url"));
+                publicId = String.valueOf(result.get("public_id"));
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to upload image", e);
+            }
+        }
+
+        User user = modelMapper.map(req, User.class);
+        user.setId(id);
+        user.setPassword(encoder.encode(USER_PASSWORD_DEFAULT));
+        user.setRoles(Set.of(role));
+        user.setStatus(UserStatus.ACTIVE);
+        user.setImageUrl(avatarUrl);
+        user.setImagePublicId(publicId);
 
         User savedUser = userRepository.save(user);
 
@@ -116,6 +136,15 @@ public class UserServiceImpl implements UserService {
                     log.warn("User not found with email: {}", email);
                     return new AppException(ErrorCode.USER_NOT_FOUND);
                 });
+
+        return modelMapper.map(user, UserDTO.class);
+    }
+
+    @Override
+    public UserDTO getCurrentUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         return modelMapper.map(user, UserDTO.class);
     }
@@ -270,6 +299,52 @@ public class UserServiceImpl implements UserService {
             }
         }
         return users;
+    }
+
+    @Override
+    public UserDTO getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+
+        return modelMapper.map(user, UserDTO.class);
+    }
+
+    @Override
+    public User getCurrentUserEntity() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Override
+    public User getUserById(String id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+    }
+
+    @Override
+    public List<UserDTO> findAllUserNotStudent(String query) {
+        Specification<User> spec = userNotStudentAndSearch(query);
+        List<User> users = userRepository.findAll(spec);
+        return users.stream()
+                .map(user -> modelMapper.map(user, UserDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    public static Specification<User> userNotStudentAndSearch(String query) {
+        return (root, cq, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (query != null && !query.trim().isEmpty()) {
+                String searchPattern = "%" + query.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), searchPattern),
+                        cb.like(cb.lower(root.get("email")), searchPattern)
+                ));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     private String getCellValue(Cell cell) {

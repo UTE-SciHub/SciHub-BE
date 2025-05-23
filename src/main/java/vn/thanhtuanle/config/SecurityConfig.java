@@ -35,6 +35,7 @@ public class SecurityConfig {
 
     private final String[] WHITE_LIST = {
             "/api/v1/auth/**",
+            "/api/v1/registration-period/**",
             "/api/v1/files/**",
             "/swagger-resources",
             "/swagger-resources/**",
@@ -61,9 +62,9 @@ public class SecurityConfig {
                         .requestMatchers(WHITE_LIST).permitAll()
                         .anyRequest().authenticated()
                 )
-                .exceptionHandling(exp -> exp
-                        .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
-                )
+//                .exceptionHandling(exp -> exp
+//                        .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
+//                )
                 .sessionManagement(manager -> manager
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )

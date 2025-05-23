@@ -14,7 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface RegistrationPeriodService {
-    Page<RegistrationPeriodDTO> getAll(Pageable pageable, String query, RegistrationPeriodsStatus status, LocalDate startDate, LocalDate endDate);
+    Page<RegistrationPeriodDTO> getAll(Pageable pageable, String query, RegistrationPeriodsStatus status, LocalDate startDate, LocalDate endDate, Integer year);
 
     RegistrationPeriodDTO create(RegistrationPeriodRequest req, MultipartFile decisionFile) throws IOException;
 
@@ -23,7 +23,7 @@ public interface RegistrationPeriodService {
     @Transactional
     RegistrationPeriodDTO update(String id, UpdateRegistrationRequest req, MultipartFile decisionFile) throws IOException;
 
-    byte[] exportExcel(String query, RegistrationPeriodsStatus status, String sort, String order, LocalDate startDate, LocalDate endDate);
+    byte[] exportExcel(String query, RegistrationPeriodsStatus status, String sort, String order, LocalDate startDate, LocalDate endDate, Integer year);
 
     RegistrationPeriodDTO getById(String id);
 }

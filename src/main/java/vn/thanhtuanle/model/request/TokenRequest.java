@@ -1,12 +1,12 @@
 package vn.thanhtuanle.model.request;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class TokenRequest {
     String token;
 }

@@ -71,13 +71,15 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).body(pageResponse);
     }
 
-    @Operation(summary = "User API", description = "Users API")
-    @PostMapping
-    public ResponseEntity<?> create(@Valid @RequestBody UserRequest req) {
+    @Operation(summary = "User API", description = "Create Users API")
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<?> create(@Valid @RequestPart("data") UserRequest req,
+                                    @RequestPart(value = "avatar", required = false) MultipartFile avatar
+    ) throws IOException {
         return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponse.<UserDTO>builder()
                 .status(HttpStatus.CREATED.value())
                 .message(Constant.CREATED_SUCCESSFULLY.getValue())
-                .data(userService.create(req))
+                .data(userService.create(req, avatar))
                 .build());
     }
 
@@ -156,6 +158,27 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue()).data(userService.changeStatus(id, status))
+                .build());
+    }
+
+    @Operation(summary = "Get all user not student API", description = "Get all user not student with optional search")
+    @GetMapping("/not-student")
+    public ResponseEntity<?> getAllUserNotStudent(@RequestParam(value = "q", required = false) String query) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.<List<UserDTO>>builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(userService.findAllUserNotStudent(query))
+                .build());
+    }
+
+    @Operation(summary = "Get User by Email", description = "Retrieve a user by their email address")
+    @GetMapping("/email")
+    public ResponseEntity<BaseResponse<?>> getUserByEmail(@RequestParam("email") String email) {
+        UserDTO user = userService.getUserByEmail(email);
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(user)
                 .build());
     }
 }

@@ -40,4 +40,6 @@ public class UpdateRegistrationRequest {
     private String description;
 
     private RegistrationPeriodsStatus status;
+
+    private String filePublicId;
 }

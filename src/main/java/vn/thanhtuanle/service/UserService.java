@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.UserStatus;
+import vn.thanhtuanle.entity.User;
 import vn.thanhtuanle.model.dto.ImportUserDTO;
 import vn.thanhtuanle.model.request.UserRequest;
 import vn.thanhtuanle.model.request.MultipleCreateUserRequest;
@@ -16,9 +17,11 @@ import java.util.Map;
 
 public interface UserService {
     @Transactional
-    UserDTO create(UserRequest req);
+    UserDTO create(UserRequest req, MultipartFile avatar) throws IOException;
 
     UserDTO getCurrentUser(String token);
+
+    UserDTO getCurrentUser();
 
     @Transactional
     Map<String, Object> multipleCreate(MultipleCreateUserRequest req);
@@ -34,4 +37,12 @@ public interface UserService {
     void resetPassword(String id);
 
     UserDTO changeStatus(String id, UserStatus status);
+
+    UserDTO getUserByEmail(String email);
+
+    User getCurrentUserEntity();
+
+    User getUserById(String id);
+
+    List<UserDTO> findAllUserNotStudent(String query);
 }

@@ -16,6 +16,7 @@ public enum ErrorCode {
     USER_BLOCKED(1405, "Tài khoản đã bị khóa", HttpStatus.BAD_REQUEST),
     USER_ALREADY_EXISTS(1405, "Người dùng đã tồn tại", HttpStatus.BAD_REQUEST),
     INVALID_CREDENTIALS(1401, "Thông tin đăng nhập không chính xác", HttpStatus.UNAUTHORIZED),
+    NOT_AUTHENTICATED(1400, "Chưa xác thực", HttpStatus.UNAUTHORIZED),
     INVALID_TOKEN(1402, "Token không hợp lệ", HttpStatus.UNAUTHORIZED),
     TOKEN_EXPIRED(1403, "Token đã hết hạn", HttpStatus.UNAUTHORIZED),
     INVALID_REQUEST(1400, "Yêu cầu không hợp lệ", HttpStatus.BAD_REQUEST),
@@ -30,6 +31,13 @@ public enum ErrorCode {
     FILE_UPLOAD_ERROR(1503, "Lỗi tải tệp lên", HttpStatus.INTERNAL_SERVER_ERROR),
     FILE_SIZE_EXCEEDED(1408, "Kích thước tệp vượt quá giới hạn", HttpStatus.BAD_REQUEST),
     EXCEL_EXPORT_ERROR(1504, "Lỗi xuất Excel", HttpStatus.INTERNAL_SERVER_ERROR),
+
+//    Topic
+    TOPIC_NOT_FOUND(1404, "Không tìm thấy đề tài", HttpStatus.NOT_FOUND),
+    TOPIC_CODE_EXISTS(1405, "Mã đề tài đã tồn tại", HttpStatus.BAD_REQUEST),
+    TOPIC_NOT_SUBMITTED(1406, "Đề tài chưa được gửi", HttpStatus.BAD_REQUEST),
+
+    INVALID_SCORE(1407, "Điểm không hợp lệ", HttpStatus.BAD_REQUEST),
     ;
 
     Integer code;

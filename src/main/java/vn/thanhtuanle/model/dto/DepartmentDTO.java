@@ -15,4 +15,5 @@ public class DepartmentDTO extends BaseDTO {
     private String phoneNumber;
     private String email;
     private Boolean delFlag;
+    private String logoPublicId;
 }

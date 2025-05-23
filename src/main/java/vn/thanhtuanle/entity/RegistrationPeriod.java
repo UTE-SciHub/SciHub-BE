@@ -6,7 +6,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 import vn.thanhtuanle.common.enums.RegistrationPeriodsStatus;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Getter
@@ -44,8 +46,14 @@ public class RegistrationPeriod extends BaseEntity {
     private RegistrationPeriodsStatus status;
 
     @Column(columnDefinition = "TEXT")
+    @Lob
     private String description;
 
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
+
+    private String filePublicId;
+
+    @OneToMany(mappedBy = "registrationPeriod", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Topic> topics = new ArrayList<>();
 }

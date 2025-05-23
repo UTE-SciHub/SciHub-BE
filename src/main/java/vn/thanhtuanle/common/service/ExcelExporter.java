@@ -7,8 +7,7 @@ import lombok.Setter;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
-import vn.thanhtuanle.common.mapper.RegistrationPeriodExcelRowMapper;
-import vn.thanhtuanle.common.mapper.UserExcelRowMapper;
+import vn.thanhtuanle.common.mapper.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -40,6 +39,10 @@ public class ExcelExporter<T> {
                 registrationPeriodExcelRowMapper.addDropdowns(sheet, 1, data.size());
             }
 
+            if(rowMapper instanceof DepartmentExcelRowMapper departmentExcelRowMapper) {
+                departmentExcelRowMapper.addDropdowns(sheet, 1, data.size());
+            }
+
             workbook.write(outputStream);
             return outputStream.toByteArray();
         }
@@ -64,6 +67,44 @@ public class ExcelExporter<T> {
         for (T item : data) {
             Row row = sheet.createRow(rowIndex++);
             rowMapper.mapRow(item, row);
+        }
+    }
+
+    public byte[] exportToExcelWithExtras(List<CouncilExportData> exportData, Boolean includeMembers, Boolean includeTopics) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Data");
+            createHeaderRow(sheet);
+            createDataRowsWithExtras(sheet, exportData, includeMembers, includeTopics);
+
+            if (rowMapper instanceof CouncilExcelRowMapper councilExcelRowMapper) {
+                councilExcelRowMapper.addDropdowns(sheet, 1, exportData.size());
+            }
+
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        }
+    }
+
+    private void createDataRowsWithExtras(Sheet sheet, List<CouncilExportData> exportData, Boolean includeMembers, Boolean includeTopics) {
+        int rowIndex = 1;
+        int memberColIndex = 8;
+        int topicColIndex = includeMembers ? 9 : 8;
+
+        for (CouncilExportData exportItem : exportData) {
+            Row row = sheet.createRow(rowIndex++);
+            rowMapper.mapRow((T) exportItem.getCouncil(), row);
+
+            if (Boolean.TRUE.equals(includeMembers) && exportItem.getMemberDetails() != null) {
+                Cell memberCell = row.createCell(memberColIndex);
+                memberCell.setCellValue(exportItem.getMemberDetails());
+            }
+
+            if (Boolean.TRUE.equals(includeTopics) && exportItem.getTopicDetails() != null) {
+                Cell topicCell = row.createCell(topicColIndex);
+                topicCell.setCellValue(exportItem.getTopicDetails());
+            }
         }
     }
 }
