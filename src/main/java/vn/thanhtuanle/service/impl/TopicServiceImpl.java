@@ -771,4 +771,25 @@ public class TopicServiceImpl implements TopicService {
         log.info("Successfully approved {} topics through council ID: {}",
                 request.getTopics().size(), request.getCouncilId());
     }
+
+    @Override
+    public List<TopicDTO> getTopicsByPrincipalInvestigator(String userId) {
+        log.info("Fetching topics where user {} is the principal investigator", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        List<TopicMember> topicMembers = topicMembersRepository.findByUserAndRole(
+                user, TopicMemberRole.INVESTIGATOR);
+
+        List<Topic> topics = topicMembers.stream()
+                .map(TopicMember::getTopic)
+                .toList();
+
+        log.info("Found {} topics where user {} is the principal investigator", topics.size(), userId);
+
+        return topics.stream()
+                .map(topic -> modelMapper.map(topic, TopicDTO.class))
+                .collect(Collectors.toList());
+    }
 }

@@ -11,6 +11,7 @@ import vn.thanhtuanle.common.enums.CouncilType;
 @Builder
 public class TopicCouncilDTO extends BaseDTO {
     private Long id;
+    @JsonBackReference
     private TopicDTO topic;
     @JsonBackReference
     private CouncilDTO council;

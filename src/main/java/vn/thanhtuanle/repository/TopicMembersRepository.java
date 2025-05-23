@@ -1,7 +1,9 @@
 package vn.thanhtuanle.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import vn.thanhtuanle.common.enums.TopicMemberRole;
 import vn.thanhtuanle.entity.TopicMember;
+import vn.thanhtuanle.entity.User;
 
 import java.util.List;
 
@@ -14,4 +16,6 @@ public interface TopicMembersRepository extends JpaRepository<TopicMember, Long>
     boolean existsByTopicIdAndUserId(String topicId, String userId);
 
     TopicMember findByTopicIdAndUserId(String topicId, String userId);
+
+    List<TopicMember> findByUserAndRole(User user, TopicMemberRole role);
 }

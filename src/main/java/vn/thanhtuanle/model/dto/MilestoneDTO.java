@@ -12,10 +12,10 @@ import java.util.List;
 @Builder
 public class MilestoneDTO extends BaseDTO {
     private Integer id;
-    private TopicDTO topic;
     private String description;
     private LocalDate expectedCompletionDate;
     private String status;
     private Boolean delFlag;
     private List<ProgressDTO> progressReports;
+    private List<ReviewDTO> reviews;
 }

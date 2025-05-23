@@ -84,7 +84,7 @@ public class ProgressServiceImpl implements ProgressService {
 
     @Override
     @Transactional
-    public ProgressDTO update(Integer id, ProgressRequest req) {
+    public ProgressDTO update(Integer id, ProgressRequest req, MultipartFile file) {
         Progress progress = progressRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Progress", "id", String.valueOf(id)));
 
@@ -100,9 +100,19 @@ public class ProgressServiceImpl implements ProgressService {
             throw new IllegalArgumentException("Progress percentage must be between 0 and 100");
         }
 
+        String documentUrl = null;
+        if (file != null && !file.isEmpty()) {
+            try {
+                Map result = cloudinaryService.upload(file);
+                documentUrl = String.valueOf(result.get("url"));
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to upload file", e);
+            }
+        }
+
         progress.setProgressPercent(req.getProgressPercent());
         progress.setReport(req.getReport());
-        progress.setDocumentUrl(req.getDocumentUrl());
+        progress.setDocumentUrl(documentUrl != null ? documentUrl : progress.getDocumentUrl());
 
         Progress updatedProgress = progressRepository.save(progress);
 

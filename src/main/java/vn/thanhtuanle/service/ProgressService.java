@@ -9,7 +9,7 @@ import java.util.List;
 public interface ProgressService {
     List<ProgressDTO> findAll(Integer milestoneId);
     ProgressDTO create(ProgressRequest req, MultipartFile file);
-    ProgressDTO update(Integer id, ProgressRequest req);
+    ProgressDTO update(Integer id, ProgressRequest req, MultipartFile file);
     void delete(Integer id);
     ProgressDTO findById(Integer id);
 }

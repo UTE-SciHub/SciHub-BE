@@ -61,14 +61,16 @@ public class ProgressController {
     }
 
     @Operation(summary = "Update progress", description = "Update an existing progress record")
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<BaseResponse<ProgressDTO>> update(
             @PathVariable Integer id,
-            @Valid @RequestBody ProgressRequest req) {
+            @Valid @RequestPart("data") ProgressRequest req,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
         return ResponseEntity.ok(BaseResponse.<ProgressDTO>builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(progressService.update(id, req))
+                .data(progressService.update(id, req, file))
                 .build());
     }
 

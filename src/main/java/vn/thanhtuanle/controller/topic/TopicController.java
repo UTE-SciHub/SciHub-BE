@@ -402,4 +402,21 @@ public class TopicController {
                 .message(Constant.SUCCESS.getValue())
                 .build());
     }
+
+
+    @Operation(summary = "Get topics by principal investigator",
+            description = "Retrieve all topics where the specified user is the principal investigator")
+    @GetMapping("/by-investigator/{userId}")
+    public ResponseEntity<BaseResponse<?>> getTopicsByPrincipalInvestigator(
+            @PathVariable String userId) {
+        log.info("API request to get topics for principal investigator: {}", userId);
+
+        List<TopicDTO> topics = topicService.getTopicsByPrincipalInvestigator(userId);
+
+        return ResponseEntity.ok(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(topics)
+                .build());
+    }
 }

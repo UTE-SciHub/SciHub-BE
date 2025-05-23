@@ -80,4 +80,6 @@ public interface TopicService {
 
     @Transactional
     void approveTopicsByCouncil(CouncilApprovalRequest request);
+
+    List<TopicDTO> getTopicsByPrincipalInvestigator(String userId);
 }

@@ -6,6 +6,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import vn.thanhtuanle.entity.Milestone;
 import vn.thanhtuanle.entity.Progress;
+import vn.thanhtuanle.entity.Review;
 import vn.thanhtuanle.entity.Topic;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.MilestoneDTO;
@@ -38,14 +39,12 @@ public class MilestoneServiceImpl implements MilestoneService {
         return milestones.stream()
                 .map(milestone -> {
                     MilestoneDTO milestoneDTO = modelMapper.map(milestone, MilestoneDTO.class);
-
-                    // Fetch progress records for this milestone
                     List<Progress> progressList = progressRepository.findByMilestone(milestone);
                     List<ProgressDTO> progressDTOs = progressList.stream()
                             .map(progress -> modelMapper.map(progress, ProgressDTO.class))
                             .toList();
-
                     milestoneDTO.setProgressReports(progressDTOs);
+
                     return milestoneDTO;
                 })
                 .toList();

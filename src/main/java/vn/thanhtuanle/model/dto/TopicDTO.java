@@ -82,5 +82,7 @@ public class TopicDTO extends BaseDTO {
 
     private List<TopicMemberDTO> members;
 
+    private List<TopicCouncilDTO> topicCouncils;
+
     private String rejectionReason;
 }
