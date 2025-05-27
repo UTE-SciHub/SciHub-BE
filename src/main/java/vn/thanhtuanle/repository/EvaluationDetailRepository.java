@@ -26,4 +26,21 @@ public interface EvaluationDetailRepository extends JpaRepository<EvaluationDeta
             "WHERE ed.evaluation.id = :applicationId " +
             "AND ed.councilMember.council.id = :councilId")
     List<EvaluationDetail> findByApplicationIdAndCouncilId(Long applicationId, Long councilId);
+
+    @Query("SELECT ed FROM EvaluationDetail ed " +
+            "WHERE ed.evaluation.id = :applicationId")
+    List<EvaluationDetail> findByApplicationId(Long applicationId);
+
+    @Query("""
+        SELECT ed
+        FROM EvaluationDetail ed
+        JOIN ed.councilMember cm
+        JOIN cm.user u
+        WHERE ed.evaluation.id = :topicApplicationId
+        AND u.id = :evaluatorId
+    """)
+    EvaluationDetail findByEvaluationIdAndCouncilMemberUserId(
+            @Param("topicApplicationId") Long topicApplicationId,
+            @Param("evaluatorId") String evaluatorId
+    );
 }

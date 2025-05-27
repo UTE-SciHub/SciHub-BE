@@ -647,10 +647,6 @@ public class TopicServiceImpl implements TopicService {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
 
-        if (topic.getStatus() != TopicStatus.ASSIGNED) {
-            throw new IllegalStateException("Chỉ những đề tài được phân công mới có thể chấp nhận.");
-        }
-
         topic.setStatus(TopicStatus.REVIEWED);
         topic.setAdditionalNotes(notes);
         topicRepository.save(topic);
@@ -663,10 +659,6 @@ public class TopicServiceImpl implements TopicService {
         log.info("Rejecting topic with ID: {}", topicId);
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
-
-        if (topic.getStatus() != TopicStatus.ASSIGNED) {
-            throw new IllegalStateException("Chỉ những đề tài được phân công mới có thể từ chối.");
-        }
 
         topic.setStatus(TopicStatus.REJECTED);
         topic.setRejectionReason(notes);

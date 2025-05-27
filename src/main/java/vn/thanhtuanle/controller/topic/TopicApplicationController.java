@@ -170,6 +170,16 @@ public class TopicApplicationController {
                 .build());
     }
 
+    @GetMapping("/{applicationId}/evaluation-detail")
+    @Operation(summary = "Get Evaluation Details", description = "Retrieve evaluation details for a specific topic application")
+    public ResponseEntity<BaseResponse<?>> getEvaluationDetails(@PathVariable Long applicationId) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data(evaluationService.getEvaluationDetailByApplicationIdAndEvaluatorId(applicationId))
+                .build());
+    }
+
     @Operation(summary = "Determine Principal Investigator for a Topic", description = "Determine the principal investigator for a topic within a council and return ranked applications")
     @PostMapping("/council/{councilId}/topic/{topicId}/summary")
     public ResponseEntity<BaseResponse<?>> determinePrincipalInvestigator(

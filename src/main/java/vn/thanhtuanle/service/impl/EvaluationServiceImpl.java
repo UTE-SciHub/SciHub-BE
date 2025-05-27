@@ -190,6 +190,16 @@ public class EvaluationServiceImpl implements EvaluationService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public EvaluationDetailDTO getEvaluationDetailByApplicationIdAndEvaluatorId(Long applicationId) {
+        User currentUser = userService.getCurrentUserEntity();
+        EvaluationDetail evaluationDetail = evaluationDetailRepository.findByEvaluationIdAndCouncilMemberUserId(applicationId, currentUser.getId());
+
+        return evaluationDetail != null
+                ? modelMapper.map(evaluationDetail, EvaluationDetailDTO.class)
+                : null;
+    }
+
     private void updateTotalScore(TopicApplication app, Long councilId) {
         List<EvaluationDetail> evaluations = evaluationDetailRepository.findByApplicationIdAndCouncilId(app.getId(), councilId);
         if (evaluations.isEmpty()) {

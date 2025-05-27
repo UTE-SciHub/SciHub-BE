@@ -13,4 +13,6 @@ public interface EvaluationService {
 
     @Transactional
     List<TopicApplicationDTO> determinePrincipalInvestigator(Long councilId, String topicId);
+
+    EvaluationDetailDTO getEvaluationDetailByApplicationIdAndEvaluatorId(Long applicationId);
 }
