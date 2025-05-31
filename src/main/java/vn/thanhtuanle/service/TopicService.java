@@ -9,6 +9,7 @@ import vn.thanhtuanle.common.enums.TopicMemberRole;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.entity.TopicMember;
 import vn.thanhtuanle.model.dto.TopicDTO;
+import vn.thanhtuanle.model.request.AddTopicMembersRequest;
 import vn.thanhtuanle.model.request.AssignToDepartmentRequest;
 import vn.thanhtuanle.model.request.CouncilApprovalRequest;
 import vn.thanhtuanle.model.request.TopicCreateRequest;
@@ -48,7 +49,7 @@ public interface TopicService {
     void addMemberToTopic(String topicId, String userId, TopicMemberRole role);
 
     @Transactional
-    void addMembersToTopic(String topicId, List<String> userIds, TopicMemberRole role);
+    void addMembersToTopic(String topicId, List<AddTopicMembersRequest.MemberEntry> members);
 
     List<TopicMember> getMembersOfTopic(String topicId);
 

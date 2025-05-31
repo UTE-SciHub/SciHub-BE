@@ -21,10 +21,7 @@ import vn.thanhtuanle.common.service.CloudinaryService;
 import vn.thanhtuanle.entity.*;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.*;
-import vn.thanhtuanle.model.request.AssignToDepartmentRequest;
-import vn.thanhtuanle.model.request.AttachedDocumentCreation;
-import vn.thanhtuanle.model.request.CouncilApprovalRequest;
-import vn.thanhtuanle.model.request.TopicCreateRequest;
+import vn.thanhtuanle.model.request.*;
 import vn.thanhtuanle.model.response.TopicStatisticsResponse;
 import vn.thanhtuanle.repository.*;
 import vn.thanhtuanle.service.TopicService;
@@ -78,13 +75,11 @@ public class TopicServiceImpl implements TopicService {
         log.info("Fetching all topics with query: {}", query);
         Specification<Topic> spec = Specification.where(null);
 
-        // Filter by status
         if (status != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("status"), status));
         }
 
-        // Filter by query (search in vietnameseName and englishName)
         if (query != null && !query.trim().isEmpty()) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) -> {
                 String searchPattern = "%" + query.toLowerCase() + "%";
@@ -100,49 +95,41 @@ public class TopicServiceImpl implements TopicService {
                     criteriaBuilder.equal(root.get("registrationPeriod").get("id"), periodId));
         }
 
-        // Filter by departmentId
         if (departmentId != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("department").get("id"), departmentId));
         }
 
-        // Filter by researchTypeId
         if (researchTypeId != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("researchType").get("id"), researchTypeId));
         }
 
-        // Filter by researchFieldId
         if (researchFieldId != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("researchField").get("id"), researchFieldId));
         }
 
-        // Filter by categoryId
         if (categoryId != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("category").get("id"), categoryId));
         }
 
-        // Filter by startDate (greater than or equal to)
         if (startDate != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.greaterThanOrEqualTo(root.get("startDate"), startDate));
         }
 
-        // Filter by endDate (less than or equal to)
         if (endDate != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.lessThanOrEqualTo(root.get("endDate"), endDate));
         }
 
-        // Filter by minBudget (totalBudget greater than or equal to minBudget)
         if (minBudget != null) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) ->
                     criteriaBuilder.greaterThanOrEqualTo(root.get("totalBudget"), minBudget));
         }
 
-        // Filter by investigator (search in principalInvestigator)
         if (investigator != null && !investigator.trim().isEmpty()) {
             spec = spec.and((root, criteriaQuery, criteriaBuilder) -> {
                 String searchPattern = "%" + investigator.toLowerCase() + "%";
@@ -479,30 +466,65 @@ public class TopicServiceImpl implements TopicService {
 
     @Transactional
     @Override
-    public void addMembersToTopic(String topicId, List<String> userIds, TopicMemberRole role) {
+    public void addMembersToTopic(String topicId, List<AddTopicMembersRequest.MemberEntry> members) {
+        log.info("Adding/updating {} members to topic {}", members.size(), topicId);
+
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
 
+        // Get all existing members of the topic
+        List<TopicMember> existingMembers = topicMembersRepository.findByTopicId(topicId);
+
+        // Create a set of user IDs from the incoming request for quick lookup
+        Set<String> requestedMemberIds = members.stream()
+                .map(AddTopicMembersRequest.MemberEntry::getUserId)
+                .collect(Collectors.toSet());
+
+        // Find and remove members who are not in the incoming list
+        List<TopicMember> membersToRemove = existingMembers.stream()
+                .filter(member -> !requestedMemberIds.contains(member.getUser().getId()))
+                .collect(Collectors.toList());
+
+        if (!membersToRemove.isEmpty()) {
+            topicMembersRepository.deleteAll(membersToRemove);
+            log.info("Removed {} members from topic {}", membersToRemove.size(), topicId);
+        }
+
+        // Process the incoming members (add new or update existing)
         List<TopicMember> newMembers = new ArrayList<>();
 
-        for (String userId : userIds) {
-            if (topicMembersRepository.existsByTopicIdAndUserId(topicId, userId)) {
+        for (AddTopicMembersRequest.MemberEntry member : members) {
+            TopicMember existingMember = existingMembers.stream()
+                    .filter(m -> m.getUser().getId().equals(member.getUserId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (existingMember != null) {
+                if (existingMember.getRole() != member.getRole()) {
+                    existingMember.setRole(member.getRole());
+                    topicMembersRepository.save(existingMember);
+                    log.info("Updated role for user {} to {} in topic {}",
+                            member.getUserId(), member.getRole(), topicId);
+                }
                 continue;
             }
 
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+            User user = userRepository.findById(member.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", member.getUserId()));
 
             TopicMember topicMember = TopicMember.builder()
                     .topic(topic)
                     .user(user)
-                    .role(role)
+                    .role(member.getRole())
                     .build();
 
             newMembers.add(topicMember);
         }
 
-        topicMembersRepository.saveAll(newMembers);
+        if (!newMembers.isEmpty()) {
+            topicMembersRepository.saveAll(newMembers);
+            log.info("Added {} new members to topic {}", newMembers.size(), topicId);
+        }
     }
 
     @Override
