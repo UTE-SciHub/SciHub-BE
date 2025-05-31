@@ -5,12 +5,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 import vn.thanhtuanle.model.ValidationError;
 
 import java.util.Date;
 import java.util.List;
 
-@Builder
+@SuperBuilder
 @Getter
 @Setter
 @AllArgsConstructor

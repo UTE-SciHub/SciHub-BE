@@ -1,6 +1,7 @@
 package vn.thanhtuanle.common.service;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -61,8 +62,12 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String email = extractUsername(token);
-        return (email.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        try {
+            final String email = extractUsername(token);
+            return (email.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        } catch (ExpiredJwtException e) {
+            return false;
+        }
     }
 
     public boolean isTokenExpired(String token) {
@@ -77,6 +82,7 @@ public class JwtService {
         return Jwts
                 .parserBuilder()
                 .setSigningKey(getSingInKey())
+                .setAllowedClockSkewSeconds(60)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

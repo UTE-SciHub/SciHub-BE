@@ -10,41 +10,72 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import vn.thanhtuanle.common.service.CustomUserDetailsService;
+import vn.thanhtuanle.common.service.LogoutService;
+
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity
 public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter authenticationFilter;
+    private final LogoutService logoutService;
 
-    private final String[] WHITE_LIST = {"/api/v1/auth/**"};
+    private final String[] WHITE_LIST = {
+            "/api/v1/auth/**",
+            "/api/v1/registration-period/**",
+            "/api/v1/files/**",
+            "/swagger-resources",
+            "/swagger-resources/**",
+            "/configuration/ui",
+            "/configuration/security",
+            "/swagger-ui.html",
+            "/webjars/**",
+            "/v3/api-docs/**",
+            "/api/public/**",
+            "/api/public/authenticate",
+            "/actuator/*",
+            "/swagger-ui/**"
+    };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .headers(headers -> headers
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
+                )
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(WHITE_LIST).permitAll()
-                        .anyRequest().permitAll()
-                );
+                        .anyRequest().authenticated()
+                )
 //                .exceptionHandling(exp -> exp
 //                        .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
 //                )
-//                .sessionManagement(manager -> manager
-//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                )
-//                .authenticationProvider(provider())
-//                .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
-//                .logout(log -> log
-//                        .logoutUrl("/api/v1/auth/logout")
-//                        .addLogoutHandler(logoutService)
-//                        .logoutSuccessHandler((request, response, authentication) ->
-//                                SecurityContextHolder.clearContext())
-//                );
+                .sessionManagement(manager -> manager
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authenticationProvider(provider())
+                .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .logout(log -> log
+                        .logoutUrl("/api/v1/auth/logout")
+                        .addLogoutHandler(logoutService)
+                        .logoutSuccessHandler((request, response, authentication) ->
+                                SecurityContextHolder.clearContext())
+                );
 
         return http.build();
     }
@@ -66,5 +97,18 @@ public class SecurityConfig {
         provider.setPasswordEncoder(passwordEncoder());
 
         return provider;
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

@@ -1,7 +1,11 @@
 package vn.thanhtuanle.common.enums;
 
 public enum RoleType {
-    USER,
+    STUDENT,
     TEACHER,
-    BGH
+    ADMIN,
+    BGH,
+    PQLKHHTQT,
+    BCNKHOA,
+    COUNCIL_MEMBER,
 }

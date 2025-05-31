@@ -1,5 +1,6 @@
 package vn.thanhtuanle.exception;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -8,6 +9,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import vn.thanhtuanle.common.enums.ErrorCode;
 import vn.thanhtuanle.model.ValidationError;
 import vn.thanhtuanle.model.response.BaseResponse;
 
@@ -44,30 +47,76 @@ public class GlobalExceptionHandler {
                 .errors(errors)
                 .build();
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseObject);
+        return ResponseEntity.status(HttpStatus.OK).body(responseObject);
     }
 
     @ExceptionHandler(value = AppException.class)
     ResponseEntity<BaseResponse<?>> handlingAppException(AppException exception, WebRequest request) {
         BaseResponse<?> error = BaseResponse.builder()
                 .code(exception.getErrorCode().getCode())
-                .status(HttpStatus.BAD_REQUEST.value())
+                .status(exception.getErrorCode().getCode())
                 .message(exception.getMessage())
                 .timestamp(new Date())
                 .path(request.getDescription(false).replace("uri=", ""))
                 .build();
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        return ResponseEntity.status(HttpStatus.OK).body(error);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<BaseResponse<Object>> handleResourceNotFoundException(ResourceNotFoundException ex) {
 
         BaseResponse<Object> responseObject = BaseResponse.<Object>builder()
-                .status(HttpStatus.BAD_REQUEST.value())
+                .status(HttpStatus.NOT_FOUND.value())
                 .message(ex.getMessage())
                 .build();
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseObject);
+        return ResponseEntity.status(HttpStatus.OK).body(responseObject);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<BaseResponse<?>> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {
+        BaseResponse<?> response = BaseResponse.builder()
+                .code(ErrorCode.FILE_SIZE_EXCEEDED.getCode())
+                .status(HttpStatus.PAYLOAD_TOO_LARGE.value())
+                .message("File size exceeds the maximum limit of 10MB. Please upload a smaller file.")
+                .timestamp(new Date())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.PAYLOAD_TOO_LARGE);
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class, EntityNotFoundException.class})
+    public ResponseEntity<BaseResponse<?>> handleIllegalArgumentException(Exception ex) {
+        BaseResponse<?> response = BaseResponse.builder()
+                .code(ErrorCode.INVALID_REQUEST.getCode())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(ex.getMessage())
+                .timestamp(new Date())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<BaseResponse<?>> handleTokenExpiredException(TokenExpiredException ex, WebRequest request) {
+        BaseResponse<?> response = BaseResponse.builder()
+                .code(ErrorCode.TOKEN_EXPIRED.getCode())
+                .status(HttpStatus.OK.value())
+                .message(ex.getMessage())
+                .timestamp(new Date())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<BaseResponse<?>> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
+        BaseResponse<?> response = BaseResponse.builder()
+                .code(ErrorCode.INTERNAL_SERVER_ERROR.getCode())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message(ex.getMessage())
+                .timestamp(new Date())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

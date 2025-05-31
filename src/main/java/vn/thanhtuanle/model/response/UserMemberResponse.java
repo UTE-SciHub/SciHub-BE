@@ -7,7 +7,10 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserResponse {
+public class UserMemberResponse {
     private String id;
     private String email;
+    private String name;
+    private String phoneNumber;
+    private String imageUrl;
 }

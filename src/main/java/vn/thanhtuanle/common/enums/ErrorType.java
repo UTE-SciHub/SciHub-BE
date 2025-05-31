@@ -1,4 +1,4 @@
-package vn.thanhtuanle.common;
+package vn.thanhtuanle.common.enums;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -8,11 +8,10 @@ import lombok.experimental.FieldDefaults;
 @Getter
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public enum Constant {
+public enum ErrorType {
+    DUPLICATE("duplicate"),
+    VALIDATION("validation"),
+    ;
 
-    USER_PASSWORD_DEFAULT("Zaq12wsxcde3"),
-    SUCCESSFULLY("Successfully!");
-
-    String value;
+    String type;
 }
-

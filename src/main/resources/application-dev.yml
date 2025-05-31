@@ -20,6 +20,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
 
   mail:
     host: sandbox.smtp.mailtrap.io
@@ -36,19 +43,30 @@ spring:
 springdoc:
   api-docs:
     enabled: true
+    path: /v3/api-docs
   swagger-ui:
     enabled: true
+    path: /swagger-ui.html
+    csrf:
+      enabled: true
 openapi:
   service:
     api-docs: backend-service
     server: http://localhost:${SERVER_PORT:8080}
-    title: Backend service
+    title: UTE-SciHub
     version: 1.0.0
 
 application:
   security:
     jwt:
       secret-key: 6250655368566B5970337336763979244226452948404D635166546A576E5A71
-      expiration: 86400000 # 1 day
+      expiration: 86400000
       refresh-token:
-        expiration: 604800000 # 7 days
+        expiration: 259200000
+  user:
+    password:
+      default: ${USER_PASSWORD_DEFAULT}
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}
