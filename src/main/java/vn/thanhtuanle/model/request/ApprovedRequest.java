@@ -8,4 +8,7 @@ public class ApprovedRequest {
 
     @NotNull(message = "Approved status is required")
     private boolean approved;
+
+    @NotNull(message = "TopicCode is required")
+    private String topicCode;
 }

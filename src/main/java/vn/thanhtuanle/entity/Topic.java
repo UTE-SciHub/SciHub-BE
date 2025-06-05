@@ -153,6 +153,9 @@ public class Topic extends BaseEntity {
     @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Contract> contracts = new ArrayList<>();
 
+    @OneToMany(mappedBy = "topic", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AcceptanceRequest> acceptanceRequests = new ArrayList<>();
+
     @Embeddable
     @Setter
     @Getter

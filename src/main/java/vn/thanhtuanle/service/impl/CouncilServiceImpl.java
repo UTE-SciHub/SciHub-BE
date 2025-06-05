@@ -192,7 +192,7 @@ public class CouncilServiceImpl implements CouncilService {
         Council council = Council.builder()
                 .name(req.getName())
                 .decisionNumber(req.getDecisionNumber())
-                .establishmentDate(req.getEstablishmentDate())
+                .establishmentDate(LocalDate.now())
                 .startDate(req.getStartDate())
                 .endDate(req.getEndDate())
                 .type(req.getType())

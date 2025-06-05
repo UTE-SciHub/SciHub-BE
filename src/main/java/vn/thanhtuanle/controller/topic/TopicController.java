@@ -351,7 +351,7 @@ public class TopicController {
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(topicService.reviewTopic(topicId, approved.isApproved(), pdfFile))
+                .data(topicService.reviewTopic(topicId, approved, pdfFile))
                 .build());
     }
 

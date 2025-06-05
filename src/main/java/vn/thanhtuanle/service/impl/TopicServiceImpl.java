@@ -85,7 +85,9 @@ public class TopicServiceImpl implements TopicService {
                 String searchPattern = "%" + query.toLowerCase() + "%";
                 return criteriaBuilder.or(
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("vietnameseName")), searchPattern),
-                        criteriaBuilder.like(criteriaBuilder.lower(root.get("englishName")), searchPattern)
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("englishName")), searchPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("topicCode")), searchPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("principalInvestigator")), searchPattern)
                 );
             });
         }
@@ -690,12 +692,16 @@ public class TopicServiceImpl implements TopicService {
 
     @Transactional
     @Override
-    public TopicDTO reviewTopic(String topicId, boolean approved, MultipartFile file) {
+    public TopicDTO reviewTopic(String topicId, ApprovedRequest req, MultipartFile file) {
         log.info("Reviewing topic with ID: {}", topicId);
+        boolean isExisting = topicRepository.existsByTopicCode(req.getTopicCode());
+        if(isExisting) {
+            throw new IllegalArgumentException("Topic code already exists: " + req.getTopicCode());
+        }
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic", "id", topicId));
 
-        if(approved) {
+        if(req.isApproved()) {
             topic.setStatus(TopicStatus.IN_CATALOG);
         } else {
             topic.setStatus(TopicStatus.REJECTED);
@@ -732,9 +738,10 @@ public class TopicServiceImpl implements TopicService {
         }
         documents.add(document);
         topic.setDocuments(documents);
+        topic.setTopicCode(req.getTopicCode());
 
         Topic savedTopic = topicRepository.save(topic);
-        log.info("Reviewed topic with ID: {}. New status: {}", topicId, approved ? "REVIEWED" : "NEED_REVISION");
+        log.info("Reviewed topic with ID: {}. New status: {}", topicId, req.isApproved() ? "REVIEWED" : "NEED_REVISION");
 
         return modelMapper.map(savedTopic, TopicDTO.class);
     }
@@ -793,12 +800,7 @@ public class TopicServiceImpl implements TopicService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        List<TopicMember> topicMembers = topicMembersRepository.findByUserAndRole(
-                user, TopicMemberRole.INVESTIGATOR);
-
-        List<Topic> topics = topicMembers.stream()
-                .map(TopicMember::getTopic)
-                .toList();
+        List<Topic> topics = topicRepository.findByPrincipalInvestigator(user.getEmail());
 
         log.info("Found {} topics where user {} is the principal investigator", topics.size(), userId);
 
