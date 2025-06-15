@@ -33,4 +33,6 @@ public interface TopicRepository extends JpaRepository<Topic, String>, JpaSpecif
 
     @Query("SELECT t FROM Topic t JOIN t.members tm WHERE tm.user.id = :userId")
     List<Topic> findByUserId(@Param("userId") String userId);
+
+    List<Topic> findByPrincipalInvestigator(String principalInvestigator);
 }

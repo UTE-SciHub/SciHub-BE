@@ -25,6 +25,13 @@ public enum TopicStatus {
     ON_HOLD,           // Đề tài tạm dừng do các lý do nội bộ (thiếu kinh phí, nhân sự, v.v.)
     SUSPENDED,         // Đề tài bị đình chỉ (vi phạm quy định, có sự cố nghiêm trọng)
 
+    // Giai đoạn nghiệm thu
+    ACCEPTANCE_REQUESTED, // Đã gửi yêu cầu nghiệm thu
+    WAITING_FOR_ACCEPTANCE, // Chờ phân công hội đồng nghiệm thu
+    ACCEPTED_WITH_CONDITIONS, // Được nghiệm thu nhưng cần chỉnh sửa, bổ sung
+    ACCEPTED,         // Đề tài đã được nghiệm thu thành công
+    NOT_ACCEPTED,       // Đề tài không đạt yêu cầu nghiệm thu
+
     // Giai đoạn kết thúc
     COMPLETED,         // Đề tài đã hoàn thành và được nghiệm thu
     FAILED,            // Đề tài thất bại, không hoàn thành theo kế hoạch

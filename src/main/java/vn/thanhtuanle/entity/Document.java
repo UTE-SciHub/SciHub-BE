@@ -33,4 +33,10 @@ public class Document extends BaseEntity {
     private LocalDateTime uploadDate;
 
     private String originalFileName;
+
+    private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "acceptance_request_id")
+    private AcceptanceRequest acceptanceRequest;
 }

@@ -1,6 +1,7 @@
 package vn.thanhtuanle.common.service;
 
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.cloudinary.Cloudinary;
@@ -13,6 +14,7 @@ import java.nio.file.Files;
 import java.util.*;
 
 @Service
+@Slf4j
 public class CloudinaryService {
     private Cloudinary cloudinary;
 
@@ -66,6 +68,47 @@ public class CloudinaryService {
         }
     }
 
+    public List<Map<String, Object>> uploadAll(List<MultipartFile> multipartFiles) {
+        List<Map<String, Object>> results = new ArrayList<>();
+        if (multipartFiles == null || multipartFiles.isEmpty()) {
+            log.warn("No files provided for uploadAll");
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("error", "No files provided");
+            results.add(errorResult);
+            return results;
+        }
+
+        for (MultipartFile file : multipartFiles) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("originalFilename", file.getOriginalFilename());
+            try {
+                validateFile(file);
+                String fileExtension = getFileExtension(file.getOriginalFilename());
+                validateFileType(fileExtension);
+
+                File tempFile = convert(file);
+                try {
+                    Map<String, Object> uploadParams = new HashMap<>();
+                    uploadParams.put("resource_type", isImage(fileExtension) ? "image" : "raw");
+                    uploadParams.put("folder", isImage(fileExtension) ? IMAGE_FOLDER : PDF_FOLDER);
+
+                    log.info("Uploading file {} in batch", file.getOriginalFilename());
+                    Map uploadResult = cloudinary.uploader().upload(tempFile, uploadParams);
+                    result.put("status", "success");
+                    result.put("uploadResult", uploadResult);
+                } finally {
+                    deleteTempFile(tempFile);
+                }
+            } catch (Exception e) {
+                log.error("Failed to upload file {}: {}", file.getOriginalFilename(), e.getMessage());
+                result.put("status", "failed");
+                result.put("error", e.getMessage());
+            }
+            results.add(result);
+        }
+        return results;
+    }
+
     public Map delete(String id, String resourceType) throws IOException {
         Map<String, Object> params = new HashMap<>();
         params.put("resource_type", resourceType);
@@ -110,5 +153,26 @@ public class CloudinaryService {
             }
         }
         return false;
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty or null");
+        }
+    }
+
+    private void validateFileType(String extension) {
+        if (!isSupportedFileType(extension)) {
+            throw new IllegalArgumentException("Unsupported file type: " + extension);
+        }
+    }
+
+    private void deleteTempFile(File tempFile) {
+        try {
+            Files.deleteIfExists(tempFile.toPath());
+            log.debug("Deleted temporary file: {}", tempFile.getAbsolutePath());
+        } catch (IOException e) {
+            log.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath(), e);
+        }
     }
 }

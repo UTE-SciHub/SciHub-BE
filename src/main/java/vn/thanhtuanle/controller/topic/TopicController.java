@@ -351,7 +351,7 @@ public class TopicController {
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
-                .data(topicService.reviewTopic(topicId, approved.isApproved(), pdfFile))
+                .data(topicService.reviewTopic(topicId, approved, pdfFile))
                 .build());
     }
 
@@ -417,6 +417,24 @@ public class TopicController {
                 .status(HttpStatus.OK.value())
                 .message(Constant.SUCCESS.getValue())
                 .data(topics)
+                .build());
+    }
+
+    @Operation(summary = "Add Members to Topic", description = "Add multiple users as members to a topic with specified roles")
+    @PostMapping("/{topicId}/members")
+    public ResponseEntity<BaseResponse<?>> addMembersToTopic(
+            @PathVariable String topicId,
+            @Valid @RequestBody AddTopicMembersRequest request) {
+
+        log.info("Adding {} members to topic with ID: {}",
+                request.getMembers().size(), topicId);
+
+        topicService.addMembersToTopic(topicId, request.getMembers());
+
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.builder()
+                .status(HttpStatus.OK.value())
+                .message(Constant.SUCCESS.getValue())
+                .data("Members added successfully to topic")
                 .build());
     }
 }
