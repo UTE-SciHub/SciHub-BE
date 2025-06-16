@@ -11,7 +11,7 @@ FROM openjdk:17
 WORKDIR /app
 
 COPY --from=builder /app/target/*.jar backend-service.jar
+COPY .env .env
 
 EXPOSE 8080
-
 ENTRYPOINT ["java", "-jar", "backend-service.jar"]

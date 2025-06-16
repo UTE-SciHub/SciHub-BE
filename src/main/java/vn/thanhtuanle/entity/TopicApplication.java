@@ -26,7 +26,10 @@ public class TopicApplication extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column(columnDefinition = "TEXT")
     private String plan;
+
+    @Column(columnDefinition = "TEXT")
     private String motivation;
 
     @Enumerated(EnumType.STRING)

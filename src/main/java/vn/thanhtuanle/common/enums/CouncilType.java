@@ -2,5 +2,6 @@ package vn.thanhtuanle.common.enums;
 
 public enum CouncilType {
     SELECT_CNDT,
-    EVALUATE_TOPIC
+    EVALUATE_TOPIC,
+    ACCEPTANCE_JURY
 }

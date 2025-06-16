@@ -1,9 +1,10 @@
-package vn.thanhtuanle.model.dto;
+package vn.thanhtuanle.model.response;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
 import vn.thanhtuanle.common.enums.TopicStatus;
+import vn.thanhtuanle.model.dto.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -14,8 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TopicDTO extends BaseDTO {
-
+public class TopicAcceptanceResponse {
     private String id;
 
     @NotBlank(message = "Vietnamese name is required")
@@ -64,8 +64,6 @@ public class TopicDTO extends BaseDTO {
 
     private String budgetBreakdown;
 
-    private String council;
-
     private String additionalNotes;
 
     private DepartmentDTO department;
@@ -78,11 +76,5 @@ public class TopicDTO extends BaseDTO {
 
     private RegistrationPeriodDTO registrationPeriod;
 
-    private List<AttachedDocumentDTO> attachedDocuments;
-
-    private List<TopicMemberDTO> members;
-
     private List<DocumentDTO> documents;
-
-    private String rejectionReason;
 }
