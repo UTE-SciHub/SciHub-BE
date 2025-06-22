@@ -4,6 +4,8 @@ import lombok.*;
 import vn.thanhtuanle.common.enums.ApplicationStatus;
 import vn.thanhtuanle.model.response.UserMemberResponse;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,4 +29,6 @@ public class TopicApplicationDTO extends BaseDTO {
     private String notes;
 
     private Boolean hasEvaluated;
+
+    private List<EvaluationDetailDTO> evaluationDetails;
 }

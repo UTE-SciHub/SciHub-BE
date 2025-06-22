@@ -11,4 +11,6 @@ public interface RegistrationPeriodRepository extends JpaRepository<Registration
     RegistrationPeriod findTopByOrderByCreatedAtDesc();
 
     List<RegistrationPeriod> findByStatus(RegistrationPeriodsStatus status);
+
+    long countByStatus(RegistrationPeriodsStatus status);
 }

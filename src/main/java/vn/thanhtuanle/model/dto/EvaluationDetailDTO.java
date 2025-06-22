@@ -10,7 +10,7 @@ import vn.thanhtuanle.entity.CouncilMember;
 @Builder
 public class EvaluationDetailDTO extends BaseDTO {
     private Long id;
-    private TopicApplicationDTO evaluation;
+//    private TopicApplicationDTO evaluation;
     private CouncilMemberDTO councilMember;
     private Integer researchOverviewScore;  // Tổng quan tình hình nghiên cứu thuộc lĩnh vực đề tài
     private Integer urgencyScore;  // Tính cấp thiết của đề tài

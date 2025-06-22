@@ -2,6 +2,7 @@ package vn.thanhtuanle.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import vn.thanhtuanle.common.enums.UserStatus;
 import vn.thanhtuanle.entity.Role;
 import vn.thanhtuanle.entity.User;
 
@@ -16,4 +17,5 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
 
     List<User> findAllByRolesNotContains(Role role);
 
+    long countByStatus(UserStatus status);
 }

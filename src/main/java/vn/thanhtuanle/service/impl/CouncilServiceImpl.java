@@ -1,19 +1,25 @@
 package vn.thanhtuanle.service.impl;
 
+import jakarta.mail.MessagingException;
 import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import vn.thanhtuanle.common.enums.CouncilType;
 import vn.thanhtuanle.common.enums.ErrorCode;
 import vn.thanhtuanle.common.enums.RoleType;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.common.mapper.CouncilExportData;
 import vn.thanhtuanle.common.service.ExcelExporter;
 import vn.thanhtuanle.common.service.ExcelRowMapper;
+import vn.thanhtuanle.common.service.MailService;
 import vn.thanhtuanle.entity.*;
 import vn.thanhtuanle.exception.AppException;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
@@ -21,7 +27,9 @@ import vn.thanhtuanle.model.dto.CouncilDTO;
 import vn.thanhtuanle.model.dto.CouncilMemberDTO;
 import vn.thanhtuanle.model.dto.TopicCouncilDTO;
 import vn.thanhtuanle.model.dto.TopicDTO;
+import vn.thanhtuanle.model.request.CouncilMemberRequest;
 import vn.thanhtuanle.model.request.CreateCouncilRequest;
+import vn.thanhtuanle.model.response.EmailRecipient;
 import vn.thanhtuanle.model.response.UserMemberResponse;
 import vn.thanhtuanle.repository.*;
 import vn.thanhtuanle.service.CouncilService;
@@ -29,11 +37,13 @@ import vn.thanhtuanle.service.UserService;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CouncilServiceImpl implements CouncilService {
     private final CouncilRepository councilRepository;
     private final ModelMapper modelMapper;
@@ -43,8 +53,13 @@ public class CouncilServiceImpl implements CouncilService {
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final TopicCouncilRepository topicCouncilRepository;
-
+    private final MailService mailService;
+    private static final String MAIL_TEMPLATE_PATH = "/template/council-member-notification.html";
     private final ExcelRowMapper<Council> councilExcelRowMapper;
+    private final AcceptanceRequestRepository acceptanceRequestRepository;
+
+    @Value("${application.domain.url}")
+    private String DOMAIN_URL;
 
     private static final List<String> EXCEL_HEADERS = Arrays.asList(
             "ID", "Tên hội đồng", "Số quyết định", "Loại hội đồng", "Ngày bắt đầu", "Ngày kết thúc", "Trạng thái", "Đã xóa", "Số thành viên"
@@ -235,6 +250,44 @@ public class CouncilServiceImpl implements CouncilService {
 
         councilMemberRepository.saveAll(councilMembers);
 
+        try {
+            List<EmailRecipient> recipients = councilMembers.stream()
+                    .map(member -> new EmailRecipient(
+                            member.getUser().getEmail(),
+                            member.getUser().getName()
+                    ))
+                    .toList();
+
+            Map<String, String> memberRoles = councilMembers.stream()
+                    .collect(Collectors.toMap(
+                            member -> member.getUser().getEmail(),
+                            member -> member.getRole() != null ? member.getRole().name() : "Thành viên"
+                    ));
+
+            mailService.sendCouncilMemberNotificationEmail(
+                    recipients,
+                    savedCouncil.getName(),
+                    savedCouncil.getDecisionNumber(),
+                    formatDate(savedCouncil.getEstablishmentDate()),
+                    formatDate(savedCouncil.getStartDate()),
+                    formatDate(savedCouncil.getEndDate()),
+                    savedCouncil.getNotes(),
+                    MAIL_TEMPLATE_PATH,
+                    generateCouncilDetailLink(savedCouncil.getId()),
+                    memberRoles
+            );
+        } catch (MessagingException e) {
+            log.error("Failed to send notification emails", e);
+        }
+
+        if(savedCouncil.getType() == CouncilType.ACCEPTANCE_JURY) {
+            List<AcceptanceRequest> acceptanceRequests = acceptanceRequestRepository.findByTopicIn(topics);
+            for (AcceptanceRequest request : acceptanceRequests) {
+                request.setCouncil(savedCouncil);
+            }
+            acceptanceRequestRepository.saveAll(acceptanceRequests);
+        }
+
         return modelMapper.map(savedCouncil, CouncilDTO.class);
     }
 
@@ -327,14 +380,16 @@ public class CouncilServiceImpl implements CouncilService {
 
         List<CouncilMember> currentMembers = council.getCouncilMembers();
         Set<String> newMemberUserIds = req.getMembers().stream()
-                .map(memberRequest -> memberRequest.getUserId())
+                .map(CouncilMemberRequest::getUserId)
                 .collect(Collectors.toSet());
 
         currentMembers.removeIf(cm -> !newMemberUserIds.contains(cm.getUser().getId()));
 
         List<User> usersToUpdate = new ArrayList<>();
+        List<CouncilMember> updatedMembers = new ArrayList<>();
         for (var memberRequest : req.getMembers()) {
-            User user = userService.getUserById(memberRequest.getUserId());
+            User user = userRepository.findById(memberRequest.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", memberRequest.getUserId()));
 
             if (user.getRoles() == null) {
                 user.setRoles(new HashSet<>());
@@ -349,18 +404,52 @@ public class CouncilServiceImpl implements CouncilService {
 
             if (existingMember != null) {
                 existingMember.setRole(memberRequest.getRole());
+                updatedMembers.add(existingMember);
             } else {
-                currentMembers.add(CouncilMember.builder()
+                CouncilMember newMember = CouncilMember.builder()
                         .council(council)
                         .user(user)
                         .role(memberRequest.getRole())
-                        .build());
+                        .build();
+                updatedMembers.add(newMember);
+                currentMembers.add(newMember);
             }
         }
 
         userRepository.saveAll(usersToUpdate);
+        councilMemberRepository.saveAll(updatedMembers);
 
         Council savedCouncil = councilRepository.save(council);
+
+        try {
+            List<EmailRecipient> recipients = updatedMembers.stream()
+                    .map(member -> new EmailRecipient(
+                            member.getUser().getName(),
+                            member.getUser().getEmail()
+                    ))
+                    .toList();
+
+            Map<String, String> memberRoles = updatedMembers.stream()
+                    .collect(Collectors.toMap(
+                            member -> member.getUser().getEmail(),
+                            member -> member.getRole() != null ? member.getRole().name() : "Thành viên"
+                    ));
+
+            mailService.sendCouncilMemberNotificationEmail(
+                    recipients,
+                    savedCouncil.getName(),
+                    savedCouncil.getDecisionNumber(),
+                    formatDate(savedCouncil.getEstablishmentDate()),
+                    formatDate(savedCouncil.getStartDate()),
+                    formatDate(savedCouncil.getEndDate()),
+                    savedCouncil.getNotes(),
+                    MAIL_TEMPLATE_PATH,
+                    generateCouncilDetailLink(savedCouncil.getId()),
+                    memberRoles
+            );
+        } catch (MessagingException e) {
+            log.error("Failed to send notification emails", e);
+        }
 
         CouncilDTO councilDTO = modelMapper.map(savedCouncil, CouncilDTO.class);
 
@@ -375,7 +464,6 @@ public class CouncilServiceImpl implements CouncilService {
                 .toList();
         councilDTO.setCouncilMembers(memberDTOs);
 
-        // Map topic councils
         List<TopicCouncilDTO> topicCouncilDTOs = savedCouncil.getTopicCouncils().stream()
                 .map(topicCouncil -> {
                     TopicCouncilDTO topicCouncilDTO = modelMapper.map(topicCouncil, TopicCouncilDTO.class);
@@ -525,5 +613,13 @@ public class CouncilServiceImpl implements CouncilService {
         }
 
         return spec;
+    }
+
+    private String generateCouncilDetailLink(Long councilId) {
+        return DOMAIN_URL + "admin/councils/" + councilId;
+    }
+
+    private String formatDate(LocalDate date) {
+        return date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 }

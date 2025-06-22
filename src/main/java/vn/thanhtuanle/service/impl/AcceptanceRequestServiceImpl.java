@@ -1,10 +1,11 @@
 package vn.thanhtuanle.service.impl;
 
+import jakarta.mail.MessagingException;
 import jakarta.persistence.criteria.Join;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.unit.DataSize;
-import vn.thanhtuanle.entity.Council;
-import vn.thanhtuanle.entity.TopicCouncil;
+import vn.thanhtuanle.common.service.MailService;
+import vn.thanhtuanle.entity.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,17 +22,17 @@ import vn.thanhtuanle.common.enums.AcceptanceStatus;
 import vn.thanhtuanle.common.enums.DocumentType;
 import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.common.service.CloudinaryService;
-import vn.thanhtuanle.entity.AcceptanceRequest;
-import vn.thanhtuanle.entity.Document;
-import vn.thanhtuanle.entity.Topic;
 import vn.thanhtuanle.exception.ResourceNotFoundException;
 import vn.thanhtuanle.model.dto.AcceptanceRequestDTO;
+import vn.thanhtuanle.model.dto.UserDTO;
 import vn.thanhtuanle.repository.AcceptanceRequestRepository;
 import vn.thanhtuanle.repository.TopicRepository;
 import vn.thanhtuanle.service.AcceptanceRequestService;
+import vn.thanhtuanle.service.UserService;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -46,9 +47,14 @@ public class AcceptanceRequestServiceImpl implements AcceptanceRequestService {
     private final ModelMapper modelMapper;
     private final CloudinaryService cloudinaryService;
     private final ObjectMapper objectMapper;
+    private final UserService userService;
+    private final MailService mailService;
 
     @Value("${spring.servlet.multipart.max-file-size}")
     private DataSize MAX_FILE_SIZE;
+
+    @Value("${application.domain.url}")
+    private String DOMAIN_URL;
 
     @Override
     public Page<AcceptanceRequestDTO> findAll(Pageable pageable, String councilId, AcceptanceStatus status) {
@@ -244,6 +250,24 @@ public class AcceptanceRequestServiceImpl implements AcceptanceRequestService {
         topicRepository.save(topic);
 
         acceptanceRequest = acceptanceRequestRepository.save(acceptanceRequest);
+
+        UserDTO user = userService.getUserByEmail(acceptanceRequest.getTopic().getPrincipalInvestigator());
+        try {
+            String recipientEmail = user.getEmail();
+            String recipientName = user.getName();
+            String topicName = topic.getVietnameseName();
+            String topicCode = topic.getTopicCode();
+            String councilName = acceptanceRequest.getCouncil().getName();
+            String evaluationDate = acceptanceRequest.getNotes() != null ?
+                    acceptanceRequest.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "Chưa xác định";
+            String notes = acceptanceRequest.getNotes() != null ? acceptanceRequest.getNotes() : "Không có nhận xét";
+            String viewDetailsUrl = DOMAIN_URL + "topics/" + topic.getId();
+
+            mailService.sendTopicAcceptedNotificationEmail(recipientEmail, recipientName, topicName, topicCode, councilName, evaluationDate, notes, viewDetailsUrl);
+        } catch (MessagingException e) {
+            log.error("Failed to send topic accepted notification email", e);
+        }
+
         return modelMapper.map(acceptanceRequest, AcceptanceRequestDTO.class);
     }
 
@@ -266,6 +290,23 @@ public class AcceptanceRequestServiceImpl implements AcceptanceRequestService {
         topicRepository.save(topic);
 
         acceptanceRequest = acceptanceRequestRepository.save(acceptanceRequest);
+
+        UserDTO user = userService.getUserByEmail(acceptanceRequest.getTopic().getPrincipalInvestigator());
+        try {
+            String recipientEmail = user.getEmail();
+            String recipientName = user.getName();
+            String topicName = topic.getVietnameseName();
+            String topicCode = topic.getTopicCode();
+            String councilName = acceptanceRequest.getCouncil().getName();
+            String evaluationDate = acceptanceRequest.getNotes() != null ?
+                    acceptanceRequest.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "Chưa xác định";
+            String notes = acceptanceRequest.getNotes() != null ? acceptanceRequest.getNotes() : "Không có nhận xét";
+            String viewDetailsUrl = DOMAIN_URL + "topics/" + topic.getId();
+
+            mailService.sendTopicRejectedNotificationEmail(recipientEmail, recipientName, topicName, topicCode, councilName, evaluationDate, notes, viewDetailsUrl);
+        } catch (MessagingException e) {
+            log.error("Failed to send topic accepted notification email", e);
+        }
         return modelMapper.map(acceptanceRequest, AcceptanceRequestDTO.class);
     }
 }
