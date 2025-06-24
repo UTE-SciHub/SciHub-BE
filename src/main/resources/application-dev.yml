@@ -8,15 +8,15 @@ spring:
   devtools:
     add-properties: true
   datasource:
-    url: ${DATABASE_URL:jdbc:mysql://ute-sci-db.mysql.database.azure.com:3306/utescihub}
-    username: ${DATABASE_USERNAME:tuanlt}
-    password: ${DATABASE_PASSWORD:Thanhtuanle939@}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -65,8 +65,10 @@ application:
         expiration: 259200000
   user:
     password:
-      default: ${USER_PASSWORD_DEFAULT:Zaq12wsxcde3}
+      default: ${USER_PASSWORD_DEFAULT}
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:dxrfmq2ru}
-    api-key: ${CLOUDINARY_API_KEY:444152161252888}
-    api-secret: ${CLOUDINARY_API_SECRET:nHSh4E3NklMo9bXGiWrAVvGKuV0}
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}
+  domain:
+    url: ${DOMAIN_URL}

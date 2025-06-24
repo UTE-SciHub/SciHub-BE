@@ -93,11 +93,6 @@ public class MilestoneServiceImpl implements MilestoneService {
             milestone.setTopic(newTopic);
         }
 
-        LocalDate currentDate = LocalDate.now();
-        if (req.getExpectedCompletionDate().isBefore(currentDate)) {
-            throw new IllegalArgumentException("expectedCompletionDate must be in the future");
-        }
-
         milestone.setDescription(req.getDescription());
         milestone.setExpectedCompletionDate(req.getExpectedCompletionDate());
         milestone.setStatus(req.getStatus());

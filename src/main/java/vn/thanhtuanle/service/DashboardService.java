@@ -10,6 +10,7 @@ import vn.thanhtuanle.repository.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -70,14 +71,6 @@ public class DashboardService {
                 "closed", closedRegistrationPeriods
         ));
 
-        // Budget information
-//        long approvedBudget = contractRepository.sumApprovedBudget();
-//        long remainingBudget = contractRepository.sumRemainingBudget();
-//        data.put("budgetInfo", Map.of(
-//                "approved", approvedBudget,
-//                "remaining", remainingBudget
-//        ));
-
         // Category distribution
         List<Map<String, Object>> categoryDistribution = topicRepository.findCategoryDistribution();
         data.put("categoryDistribution", categoryDistribution);
@@ -85,6 +78,76 @@ public class DashboardService {
         // Research field distribution
         List<Map<String, Object>> researchFieldDistribution = topicRepository.findResearchFieldDistribution();
         data.put("researchFieldDistribution", researchFieldDistribution);
+
+        return data;
+    }
+
+    public Map<String, Object> getResearchProcessStatistics(int year) {
+        Map<String, Object> data = new HashMap<>();
+
+        List<Map<String, Object>> topicRegistrations = topicRepository.countTopicRegistrationsByMonthForYear(year);
+        data.put("topicRegistrations", topicRegistrations);
+
+        List<Map<String, Object>> participantsByRole = topicRepository.countTopicParticipantsByRoleForYear(year);
+        data.put("participantsByRole", participantsByRole);
+
+        return data;
+    }
+
+    public Map<String, Object> getTopicReviewStatistics(int year) {
+        Map<String, Object> data = new HashMap<>();
+
+        // Count of topics by review status
+        List<Map<String, Object>> reviewStatuses = topicRepository.countTopicsByReviewStatusForYear(year);
+        data.put("reviewStatuses", reviewStatuses);
+
+        // Average time from registration to review
+        Double averageReviewTime = topicRepository.getAverageReviewTimeForYear(year);
+        data.put("averageReviewTimeInDays", averageReviewTime != null ? averageReviewTime : 0);
+
+        return data;
+    }
+
+    public Map<String, Object> getTopicProgressStatistics(int year) {
+        Map<String, Object> data = new HashMap<>();
+
+        // Get total count of active topics for the year
+        long totalActiveTopics = topicRepository.countByStatusInAndYearOfStartDate(
+                List.of(TopicStatus.APPROVED, TopicStatus.IN_PROGRESS), year);
+
+        // Get progress status distribution
+        List<Map<String, Object>> progressStatus = topicRepository.getTopicProgressStatusForYear(year);
+
+        // Create a complete progress status map with all categories
+        Map<String, Long> progressStatusMap = new HashMap<>();
+        progressStatusMap.put("AHEAD", 0L);
+        progressStatusMap.put("ON_TRACK", 0L);
+        progressStatusMap.put("BEHIND", 0L);
+
+        // Fill in actual counts where available
+        for (Map<String, Object> status : progressStatus) {
+            String category = (String) status.get("progressStatus");
+            Long count = ((Number) status.get("count")).longValue();
+            progressStatusMap.put(category, count);
+        }
+
+        // Convert to list format expected by frontend
+        List<Map<String, Object>> completeProgressStatus = progressStatusMap.entrySet().stream()
+                .map(entry -> {
+                    Map<String, Object> statusMap = new HashMap<>();
+                    statusMap.put("progressStatus", entry.getKey());
+                    statusMap.put("count", entry.getValue());
+                    return statusMap;
+                })
+                .collect(Collectors.toList());
+
+        data.put("progressStatus", completeProgressStatus);
+        data.put("totalActiveTopics", totalActiveTopics);
+
+        // Get milestone data for Gantt chart
+        List<Map<String, Object>> milestonesForGantt = topicRepository.getTopicMilestonesForGanttChart(year);
+        data.put("milestonesForGantt", milestonesForGantt);
+        data.put("totalMilestones", milestonesForGantt.size());
 
         return data;
     }

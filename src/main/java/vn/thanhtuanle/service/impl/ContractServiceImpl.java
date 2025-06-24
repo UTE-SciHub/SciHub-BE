@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import vn.thanhtuanle.common.enums.ContractStatus;
+import vn.thanhtuanle.common.enums.TopicStatus;
 import vn.thanhtuanle.common.service.CloudinaryService;
 import vn.thanhtuanle.entity.Contract;
 import vn.thanhtuanle.entity.Topic;
@@ -68,8 +69,13 @@ public class ContractServiceImpl implements ContractService {
             log.info("Contract file uploaded to: {}", fileUrl);
         }
 
-        contract.setTopic(topicRepository.findById(req.getIdTopic())
-                .orElseThrow(() -> new ResourceNotFoundException("Topic", "ID", req.getIdTopic())));
+        Topic topic = topicRepository.findById(req.getIdTopic())
+                .orElseThrow(() -> new ResourceNotFoundException("Topic", "ID", req.getIdTopic()));
+
+        topic.setStatus(TopicStatus.IN_PROGRESS);
+        topicRepository.save(topic);
+
+        contract.setTopic(topic);
 
         Contract savedContract = contractRepository.save(contract);
         log.info("Contract created with ID: {}", savedContract.getId());
