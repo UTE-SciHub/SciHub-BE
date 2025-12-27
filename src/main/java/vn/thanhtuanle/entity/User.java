@@ -48,6 +48,10 @@ public class User extends BaseEntity implements UserDetails {
 
     private LocalDate dob; // yyyy-MM-dd
 
+    private boolean mfaEnabled;
+
+    private String secret;
+
     @ManyToMany(cascade = CascadeType.ALL,fetch = FetchType.EAGER)
     @JoinTable(name = "user_role",
             joinColumns=@JoinColumn(name="user", referencedColumnName = "id"),

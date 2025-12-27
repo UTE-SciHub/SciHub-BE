@@ -2,6 +2,7 @@ package vn.thanhtuanle.service;
 
 import vn.thanhtuanle.model.request.LoginRequest;
 import vn.thanhtuanle.model.request.TokenRequest;
+import vn.thanhtuanle.model.request.VerificationRequest;
 import vn.thanhtuanle.model.response.AuthResponse;
 
 public interface AuthService {
@@ -12,4 +13,6 @@ public interface AuthService {
     AuthResponse refreshToken(String refreshToken);
 
     void logout();
+
+    AuthResponse verifyMfaCode(VerificationRequest req);
 }

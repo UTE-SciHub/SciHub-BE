@@ -13,6 +13,7 @@ import vn.thanhtuanle.common.enums.Constant;
 import vn.thanhtuanle.model.request.LoginRequest;
 import vn.thanhtuanle.model.request.RefreshTokenRequest;
 import vn.thanhtuanle.model.request.TokenRequest;
+import vn.thanhtuanle.model.request.VerificationRequest;
 import vn.thanhtuanle.model.response.AuthResponse;
 import vn.thanhtuanle.model.response.BaseResponse;
 import vn.thanhtuanle.service.AuthService;
@@ -50,5 +51,10 @@ public class AuthController {
                 .message(Constant.SUCCESS.getValue())
                 .data(authService.introspect(token))
                 .build());
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<?> verifyCode(@RequestBody VerificationRequest req) {
+        return ResponseEntity.ok(authService.verifyMfaCode(req));
     }
 }
