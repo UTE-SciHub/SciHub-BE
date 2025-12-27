@@ -32,13 +32,15 @@ public enum ErrorCode {
     FILE_SIZE_EXCEEDED(1408, "Kích thước tệp vượt quá giới hạn", HttpStatus.BAD_REQUEST),
     EXCEL_EXPORT_ERROR(1504, "Lỗi xuất Excel", HttpStatus.INTERNAL_SERVER_ERROR),
 
-//    Topic
+    //    Topic
     TOPIC_NOT_FOUND(1404, "Không tìm thấy đề tài", HttpStatus.NOT_FOUND),
     TOPIC_CODE_EXISTS(1405, "Mã đề tài đã tồn tại", HttpStatus.BAD_REQUEST),
     TOPIC_NOT_SUBMITTED(1406, "Đề tài chưa được gửi", HttpStatus.BAD_REQUEST),
 
     INVALID_SCORE(1407, "Điểm không hợp lệ", HttpStatus.BAD_REQUEST),
-    ;
+
+    MFA_REQUIRED(1409, "Xác thực đa yếu tố bắt buộc", HttpStatus.UNAUTHORIZED),
+    INVALID_2FA_CODE(1410, "Mã xác thực không hợp lệ", HttpStatus.BAD_REQUEST);
 
     Integer code;
     String message;

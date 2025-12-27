@@ -17,10 +17,12 @@ import vn.thanhtuanle.entity.User;
 import vn.thanhtuanle.exception.AppException;
 import vn.thanhtuanle.model.request.LoginRequest;
 import vn.thanhtuanle.model.request.TokenRequest;
+import vn.thanhtuanle.model.request.VerificationRequest;
 import vn.thanhtuanle.model.response.AuthResponse;
 import vn.thanhtuanle.repository.TokenRepository;
 import vn.thanhtuanle.repository.UserRepository;
 import vn.thanhtuanle.service.AuthService;
+import vn.thanhtuanle.service.TwoFactorAuthService;
 
 import java.time.LocalDateTime;
 
@@ -32,6 +34,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final TokenRepository tokenRepository;
+    private final TwoFactorAuthService tfaService;
 
     private void savedUserToken(User user, String jwtToken, TokenType type) {
         Token token = Token.builder()
@@ -94,9 +97,17 @@ public class AuthServiceImpl implements AuthService {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
+        if (user.isMfaEnabled()) {
+            return AuthResponse.builder()
+                    .mfaEnabled(true)
+                    .secretImageUri(tfaService.generateQrCodeImageUri(user.getSecret()))
+                    .build();
+        }
+
         return AuthResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
+                .mfaEnabled(true)
                 .build();
     }
 
@@ -158,5 +169,32 @@ public class AuthServiceImpl implements AuthService {
             log.warn("Logout attempt with no authenticated user");
             throw new AppException(ErrorCode.NOT_AUTHENTICATED);
         }
+    }
+
+    @Override
+    public AuthResponse verifyMfaCode(VerificationRequest req) {
+        User user = userRepository.findByEmail(req.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (tfaService.isOtpNotValid(user.getSecret(), req.getCode())) {
+            log.warn("MFA verification failed for email: {} - Reason: Invalid OTP code", req.getEmail());
+            throw new AppException(ErrorCode.INVALID_2FA_CODE);
+        }
+
+        String jwtToken = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        revokeAllUserTokens(user);
+
+        savedUserToken(user, jwtToken, TokenType.ACCESS);
+        savedUserToken(user, refreshToken, TokenType.REFRESH);
+
+        log.info("MFA verification successful for email: {}", req.getEmail());
+
+        return AuthResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .mfaEnabled(user.isMfaEnabled())
+                .build();
     }
 }
