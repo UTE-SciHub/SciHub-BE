@@ -1,20 +1,75 @@
+server:
+  port: ${PORT:8080}
+
 spring:
   config:
     activate:
       on-profile: prod
   devtools:
     add-properties: true
+  datasource:
+    url: ${DATABASE_URL:jdbc:mysql://ute-sci-db.mysql.database.azure.com:3306/utescihub}
+    username: ${DATABASE_USERNAME:tuanlt}
+    password: ${DATABASE_PASSWORD:Thanhtuanle939@}
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: 9e9fb975d7f626
+    password: efcf0e3fd4e576
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 springdoc:
   api-docs:
-    enabled: false
+    enabled: true
+    path: /v3/api-docs
   swagger-ui:
-    enabled: false
+    enabled: true
+    path: /swagger-ui.html
+    csrf:
+      enabled: true
+openapi:
+  service:
+    api-docs: backend-service
+    server: http://localhost:${PORT:8080}
+    title: UTE-SciHub
+    version: 1.0.0
+
+application:
+  security:
+    jwt:
+      secret-key: 6250655368566B5970337336763979244226452948404D635166546A576E5A71
+      expiration: 86400000
+      refresh-token:
+        expiration: 259200000
+  user:
+    password:
+      default: ${USER_PASSWORD_DEFAULT:Zaq12wsxcde3}
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:dxrfmq2ru}
+    api-key: ${CLOUDINARY_API_KEY:444152161252888}
+    api-secret: ${CLOUDINARY_API_SECRET:nHSh4E3NklMo9bXGiWrAVvGKuV0}
+  domain:
+    dev: ${DOMAIN_DEV:localhost}
+    production: ${DOMAIN_PRODUCTION}

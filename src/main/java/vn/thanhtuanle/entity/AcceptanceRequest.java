@@ -49,7 +49,7 @@ public class AcceptanceRequest extends BaseEntity {
     @OneToMany(mappedBy = "acceptanceRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Document> documents = new ArrayList<>();
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "council_id")
     private Council council;
 }

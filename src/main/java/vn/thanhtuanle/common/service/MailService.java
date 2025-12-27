@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -60,6 +61,90 @@ public class MailService {
         }
     }
 
+    @Async("emailExecutor")
+    public void sendCouncilMemberNotificationEmail(
+            List<EmailRecipient> recipients,
+            String councilName,
+            String decisionNumber,
+            String establishmentDate,
+            String startDate,
+            String endDate,
+            String notes,
+            String templatePath,
+            String viewDetailsUrl,
+            Map<String, String> memberRoles
+    ) throws MessagingException {
+        log.info("Sending council member notification email to members: {}", recipients);
+
+        String baseHtmlContent = loadHtmlTemplate(templatePath);
+        String subject = "Thông báo tham gia hội đồng - " + councilName;
+        String escapedHtmlContent = baseHtmlContent.replaceAll("%(?!s)", "%%");
+
+        for (EmailRecipient recipient : recipients) {
+            String role = memberRoles.getOrDefault(recipient.getEmail(), "Thành viên");
+            String htmlContent = String.format(escapedHtmlContent,
+                    recipient.getName(),
+                    councilName,
+                    role,
+                    councilName,
+                    decisionNumber,
+                    establishmentDate,
+                    startDate,
+                    endDate,
+                    notes != null ? notes : "Không có ghi chú",
+                    viewDetailsUrl
+            );
+
+            sendEmail(recipient.getEmail(), subject, htmlContent);
+        }
+    }
+
+    @Async("emailExecutor")
+    public void sendTopicAcceptedNotificationEmail(String recipientEmail, String recipientName, String topicName, String topicCode, String councilName, String evaluationDate, String notes, String viewDetailsUrl) throws MessagingException {
+        log.info("Sending topic accepted notification email to: {}", recipientEmail);
+
+        String baseHtmlContent = loadHtmlTemplate("/template/topic-accepted-notification.html");
+        String subject = "Thông báo chấp thuận đề tài - " + topicName;
+
+        String escapedHtmlContent = baseHtmlContent.replaceAll("%(?!s)", "%%");
+        String formattedDate = formatDateTime(LocalDateTime.parse(evaluationDate));
+
+        String htmlContent = String.format(escapedHtmlContent,
+                recipientName,
+                topicName,
+                topicCode,
+                councilName,
+                formattedDate,
+                notes != null ? notes : "Không có ghi chú",
+                viewDetailsUrl
+        );
+
+        sendEmail(recipientEmail, subject, htmlContent);
+    }
+
+    @Async("emailExecutor")
+    public void sendTopicRejectedNotificationEmail(String recipientEmail, String recipientName, String topicName, String topicCode, String councilName, String evaluationDate, String notes, String viewDetailsUrl) throws MessagingException {
+        log.info("Sending topic rejected notification email to: {}", recipientEmail);
+
+        String baseHtmlContent = loadHtmlTemplate("/template/topic-rejected-notification.html");
+        String subject = "Thông báo từ chối đề tài - " + topicName;
+
+        String escapedHtmlContent = baseHtmlContent.replaceAll("%(?!s)", "%%");
+        String formattedDate = formatDateTime(LocalDateTime.parse(evaluationDate));
+
+        String htmlContent = String.format(escapedHtmlContent,
+                recipientName,
+                topicName,
+                topicCode,
+                councilName,
+                formattedDate,
+                notes != null ? notes : "Không có ghi chú",
+                viewDetailsUrl
+        );
+
+        sendEmail(recipientEmail, subject, htmlContent);
+    }
+
     private void sendEmail(String to, String subject, String htmlContent) throws MessagingException {
         MimeMessage message = javaMailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -70,7 +155,7 @@ public class MailService {
         log.info("Email sent successfully to: {}", to);
     }
 
-    private String loadHtmlTemplate(String path) {
+    public String loadHtmlTemplate(String path) {
         try (InputStream inputStream = getClass().getResourceAsStream(path)) {
             if (inputStream == null) {
                 throw new IOException("Cannot find template file: " + path);

@@ -14,4 +14,6 @@ public interface AcceptanceRequestRepository extends JpaRepository<AcceptanceReq
     Integer countByTopicId(@Param("topicId") String topicId);
 
     List<AcceptanceRequest> findByTopic(Topic topic);
+
+    List<AcceptanceRequest> findByTopicIn(List<Topic> topics);
 }
