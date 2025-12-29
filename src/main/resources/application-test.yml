@@ -4,10 +4,15 @@ spring:
       on-profile: test
   devtools:
     add-properties: true
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: false
     properties:
       hibernate:
@@ -24,3 +29,26 @@ openapi:
     server: ${BACKEND_SERVICE:http://localhost:${server.port}}
     title: Backend service
     version: 1.0.0
+
+application:
+  security:
+    jwt:
+      secret-key: 6250655368566B5970337336763979244226452948404D635166546A576E5A71
+      expiration: 86400000
+      refresh-token:
+        expiration: 259200000
+  cloudinary:
+    cloud-name: test-cloud
+    api-key: test-key
+    api-secret: test-secret
+  mail:
+    host: localhost
+    port: 2525
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
